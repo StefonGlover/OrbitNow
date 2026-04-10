@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/api/astronauts/route": "app/api/astronauts/route.js",
+  "/api/news/route": "app/api/news/route.js",
+  "/api/curiosity-insights/route": "app/api/curiosity-insights/route.js",
+  "/api/iss/route": "app/api/iss/route.js",
+  "/api/apod/route": "app/api/apod/route.js",
+  "/api/weather/route": "app/api/weather/route.js",
+  "/api/passes/route": "app/api/passes/route.js",
+  "/api/launches/route": "app/api/launches/route.js",
+  "/api/mission-brief/route": "app/api/mission-brief/route.js",
+  "/api/satellite/[norad]/route": "app/api/satellite/[norad]/route.js",
+  "/api/what-if/route": "app/api/what-if/route.js"
+}

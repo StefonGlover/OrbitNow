@@ -1,101 +1,151 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import { ApodCardFallback } from "@/components/ApodCardFallback";
+import { CuriosityInsightsCardFallback } from "@/components/CuriosityInsightsCardFallback";
+import { LatestSpaceNewsCardFallback } from "@/components/LatestSpaceNewsCardFallback";
+import { MissionBriefCardFallback } from "@/components/MissionBriefCardFallback";
+import { WhatIfInsightCard } from "@/components/WhatIfInsightCard";
+import {
+  createLaunchFallback,
+  createPeopleInSpaceFallback,
+  fetchIssLocation,
+  fetchNextLaunch,
+  fetchPeopleInSpace,
+} from "@/lib/space-data";
+import { OrbitNowDashboard } from "@/components/OrbitNowDashboard";
+import { StreamedApodCard } from "@/components/server/StreamedApodCard";
+import { StreamedCuriosityInsightsCard } from "@/components/server/StreamedCuriosityInsightsCard";
+import { StreamedLatestSpaceNewsCard } from "@/components/server/StreamedLatestSpaceNewsCard";
+import { StreamedMissionBriefCard } from "@/components/server/StreamedMissionBriefCard";
 
-export default function Home() {
+function withTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs: number) {
+  return Promise.race<T>([
+    promise,
+    new Promise<T>((resolve) => {
+      setTimeout(() => resolve(fallback), timeoutMs);
+    }),
+  ]);
+}
+
+export default async function Home() {
+  const [initialIss, initialAstronauts, initialLaunch] = await Promise.all([
+    withTimeout(fetchIssLocation().catch(() => null), null, 1_500),
+    withTimeout(
+      fetchPeopleInSpace().catch(() => createPeopleInSpaceFallback()),
+      createPeopleInSpaceFallback(),
+      1_500,
+    ),
+    withTimeout(
+      fetchNextLaunch().catch(() => createLaunchFallback()),
+      createLaunchFallback(),
+      2_000,
+    ),
+  ]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="min-h-screen">
+      <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 lg:px-8 lg:py-8">
+        <header className="ui-card ui-card-hero mb-8 lg:mb-10">
+          <div className="relative z-[1] flex flex-col gap-5 border-b border-white/10 pb-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/15 bg-gradient-to-br from-cyan-400/14 via-sky-400/10 to-indigo-500/10">
+                <span className="absolute inset-[9px] rounded-[18px] border border-white/10" />
+                <span className="ui-live-dot h-2.5 w-2.5" />
+              </div>
+              <div>
+                <p className="ui-kicker">Orbital Mission Console</p>
+                <div className="mt-1 flex items-center gap-3">
+                  <h1 className="text-2xl font-semibold tracking-[-0.04em] text-white sm:text-3xl">
+                    OrbitNow
+                  </h1>
+                  <span className="ui-chip ui-chip-live">ISS live</span>
+                </div>
+              </div>
+            </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="ui-chip">Server-side routing</span>
+              <span className="ui-chip">Ground track + search</span>
+              <span className="ui-chip">AI + news intelligence</span>
+            </div>
+          </div>
+
+          <div className="relative z-[1] mt-8 grid gap-8 xl:grid-cols-[1.18fr_0.82fr] xl:items-end">
+            <div>
+              <p className="ui-kicker">Mission Control</p>
+              <h2 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">
+                Premium orbital awareness for the live sky above Earth.
+              </h2>
+              <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg">
+                Follow the ISS with a dark world map, compare other spacecraft by
+                NORAD ID, and keep launch, crew, skywatch guidance, AI-generated
+                insight, and the latest space news in one polished mission-control
+                view.
+              </p>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <span className="ui-chip ui-chip-live">
+                  <span className="ui-live-dot" />
+                  5-second ISS updates
+                </span>
+                <span className="ui-chip">Dark map hero</span>
+                <span className="ui-chip">Responsive control deck</span>
+              </div>
+            </div>
+
+            <div className="ui-panel ui-panel-feature grid gap-4 p-5 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+              <div>
+                <p className="ui-label">Live Poll</p>
+                <p className="mt-3 text-base font-medium text-white">ISS every 5 seconds</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Continuous client polling through local API routes keeps the browser
+                  responsive and secrets server-side.
+                </p>
+              </div>
+              <div>
+                <p className="ui-label">Map Surface</p>
+                <p className="mt-3 text-base font-medium text-white">ISS glow + orbit trail</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Live station position, recent path history, and optional satellite
+                  search overlays share one visual map layer.
+                </p>
+              </div>
+              <div>
+                <p className="ui-label">AI Layer</p>
+                <p className="mt-3 text-base font-medium text-white">Curiosity and what-if insight</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Mission summaries and scenario-driven insights translate raw orbital
+                  data into quick, readable context.
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <OrbitNowDashboard
+          satelliteFeaturesEnabled={Boolean(process.env.N2YO_API_KEY)}
+          viewingEnabled={Boolean(process.env.OPENAI_API_KEY)}
+          initialAstronauts={initialAstronauts}
+          initialIss={initialIss}
+          initialLaunch={initialLaunch}
+        >
+          <Suspense fallback={<MissionBriefCardFallback />}>
+            <StreamedMissionBriefCard />
+          </Suspense>
+          <Suspense fallback={<CuriosityInsightsCardFallback />}>
+            <StreamedCuriosityInsightsCard />
+          </Suspense>
+          <WhatIfInsightCard />
+        </OrbitNowDashboard>
+
+        <div className="mt-7 grid gap-6 md:grid-cols-2 xl:mt-8 xl:grid-cols-6">
+          <Suspense fallback={<LatestSpaceNewsCardFallback />}>
+            <StreamedLatestSpaceNewsCard />
+          </Suspense>
+          <Suspense fallback={<ApodCardFallback />}>
+            <StreamedApodCard />
+          </Suspense>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }
