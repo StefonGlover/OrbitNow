@@ -11,7 +11,7 @@ OrbitNow is a production-ready Next.js 14 + TypeScript dashboard for live orbita
 - Visible ISS pass forecasts via `/api/passes`
 - Next launch card via `/api/launches`
 - Optional AI viewing brief via `/api/weather`
-- Latest space news via `/api/news`
+- Latest space news via `/api/news`, enhanced with an OpenAI current brief
 - Astronomy Picture of the Day via `/api/apod`
 - AI Mission Brief via `/api/mission-brief`
 - Typed API responses, loading states, and error states throughout
@@ -78,7 +78,7 @@ npm run start
 - `/api/satellite/[norad]`: Proxies N2YO satellite position lookups
 - `/api/passes?lat=...&lon=...`: Proxies N2YO visible pass forecasts
 - `/api/launches`: Proxies the next upcoming launch from Launch Library 2
-- `/api/news`: Proxies and normalizes recent articles from the Spaceflight News API
+- `/api/news`: Proxies recent articles from the Spaceflight News API and adds an OpenAI-generated current briefing
 - `/api/weather?lat=...&lon=...`: Generates an AI skywatching brief from location and live dashboard context
 - `/api/apod`: Proxies NASA Astronomy Picture of the Day
 - `/api/mission-brief`: Generates an AI summary from the live dashboard data

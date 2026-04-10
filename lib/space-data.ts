@@ -3,7 +3,7 @@ import {
   IssApiResponse,
   LaunchesApiResponse,
   LaunchLibraryUpcomingResponse,
-  LatestSpaceNewsApiResponse,
+  LatestSpaceNewsFeedResponse,
   N2YoPositionsResponse,
   N2YoVisualPassesResponse,
   NasaApodResponse,
@@ -334,7 +334,7 @@ export function createLaunchFallback(): LaunchesApiResponse {
   };
 }
 
-export async function fetchLatestSpaceNews(): Promise<LatestSpaceNewsApiResponse> {
+export async function fetchLatestSpaceNewsFeed(): Promise<LatestSpaceNewsFeedResponse> {
   return withServerCache("latest-space-news", {
     ttlMs: 600_000,
     staleWhileErrorMs: 3_600_000,

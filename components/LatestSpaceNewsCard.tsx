@@ -83,11 +83,11 @@ export function LatestSpaceNewsCard({
     <SectionCard
       title="Latest Space News"
       eyebrow="Intelligence Feed"
-      description="A curated stream of recent space reporting, normalized server-side into one clean OrbitNow briefing surface."
+      description="Recent space reporting, normalized server-side and elevated with an OpenAI current-awareness briefing."
       action={<CardRefreshButton isLoading={isRefreshing} onRefresh={refresh} />}
       className="md:col-span-2 xl:col-span-6"
       isLoading={isBusy}
-      loadingLabel={isLoading ? "Loading" : "Refreshing News"}
+      loadingLabel={isLoading ? "Loading" : "Refreshing Intelligence"}
     >
       {isLoading && !data ? (
         <div className="space-y-5">
@@ -138,44 +138,81 @@ export function LatestSpaceNewsCard({
             <div className="space-y-4">
               <div className="ui-panel ui-panel-feature p-5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="ui-chip ui-chip-live">Headline briefing</span>
-                  <span className="ui-chip">{data.featuredStory.source}</span>
+                  <span className="ui-chip ui-chip-live">AI current brief</span>
+                  <span className="ui-chip">{data.intelligence.model}</span>
                 </div>
-                <p className="mt-4 text-sm uppercase tracking-[0.22em] text-cyan-100/75">
-                  {formatRelativeTime(data.featuredStory.publishedAt)} •{" "}
-                  {formatDateTime(data.featuredStory.publishedAt)}
+                <p className="mt-4 text-xl font-semibold tracking-[-0.03em] text-white">
+                  {data.intelligence.title}
                 </p>
                 <p className="mt-4 text-base leading-8 text-white">
-                  {truncateText(data.featuredStory.summary, 360)}
+                  {data.intelligence.summary}
                 </p>
-                {data.featuredStory.authorNames.length > 0 ? (
-                  <p className="mt-4 text-sm text-slate-300">
-                    By {data.featuredStory.authorNames.join(", ")}
+                <div className="mt-4 rounded-[22px] border border-white/10 bg-slate-950/45 p-4">
+                  <p className="ui-label text-cyan-100/75">Why Now</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-200">
+                    {data.intelligence.whyNow}
                   </p>
-                ) : null}
+                </div>
+                <p className="mt-4 text-xs uppercase tracking-[0.2em] text-cyan-100/70">
+                  Generated {formatDateTime(data.intelligence.generatedAt)} •{" "}
+                  {data.featuredStory.source}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3">
+                {data.intelligence.signals.map((signal) => (
+                  <div className="ui-panel" key={`${signal.label}-${signal.value}`}>
+                    <p className="ui-label">{signal.label}</p>
+                    <p className="mt-3 text-sm font-medium text-white">{signal.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="ui-panel">
+                <p className="ui-label">Watch List</p>
+                <div className="mt-3 grid gap-2">
+                  {data.intelligence.watchList.map((item) => (
+                    <p className="text-sm leading-7 text-slate-200" key={item}>
+                      {item}
+                    </p>
+                  ))}
+                </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="ui-panel">
-                  <p className="ui-label">Feed Source</p>
-                  <p className="mt-3 text-sm font-medium text-white">{data.source}</p>
+                  <p className="ui-label">Story Timestamp</p>
+                  <p className="mt-3 text-sm font-medium text-white">
+                    {formatRelativeTime(data.featuredStory.publishedAt)}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-300">
+                    {formatDateTime(data.featuredStory.publishedAt)}
+                  </p>
                 </div>
                 <div className="ui-panel">
                   <p className="ui-label">Feed Updated</p>
                   <p className="mt-3 text-sm font-medium text-white">
                     {formatDateTime(data.fetchedAt)}
                   </p>
+                  <p className="mt-1 text-sm text-slate-300">{data.source}</p>
                 </div>
               </div>
 
-              <a
-                className="ui-btn-primary"
-                href={data.featuredStory.url}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Open top story
-              </a>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  className="ui-btn-primary"
+                  href={data.featuredStory.url}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Open top story
+                </a>
+                {data.featuredStory.authorNames.length > 0 ? (
+                  <div className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm text-slate-200">
+                    By {data.featuredStory.authorNames.join(", ")}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -216,7 +253,7 @@ export function LatestSpaceNewsCard({
 
           {isRefreshing ? (
             <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/80">
-              Refreshing intelligence feed...
+              Refreshing AI news intelligence...
             </p>
           ) : null}
         </div>

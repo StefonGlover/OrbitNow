@@ -1,8 +1,10 @@
 import { AiDashboardContext } from "@/lib/ai-context";
 import {
   CuriosityInsightsApiResponse,
+  LatestSpaceNewsFeedResponse,
   MissionBriefApiResponse,
   OpenAIResponsesApiResponse,
+  SpaceNewsIntelligence,
   ViewingConditionsApiResponse,
   WhatIfInsightApiResponse,
 } from "@/lib/types";
@@ -491,6 +493,101 @@ export async function generateViewingConditions(input: {
   });
 }
 
+export async function generateSpaceNewsIntelligence(input: {
+  feed: LatestSpaceNewsFeedResponse;
+}): Promise<SpaceNewsIntelligence> {
+  const stories = [input.feed.featuredStory, ...input.feed.articles].filter(
+    Boolean,
+  );
+  const cacheKey = [
+    "space-news-intelligence",
+    ...stories.map((story) => `${story!.id}-${story!.publishedAt}`),
+  ].join(":");
+
+  const response = await requestStructuredJson<{
+    featuredStoryId: number | null;
+    title: string;
+    summary: string;
+    whyNow: string;
+    watchList: string[];
+    signals: SpaceNewsIntelligence["signals"];
+  }>({
+    cacheKey,
+    ttlMs: 600_000,
+    staleWhileErrorMs: 3_600_000,
+    schemaName: "space_news_intelligence",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        featuredStoryId: {
+          type: ["integer", "null"],
+        },
+        title: { type: "string" },
+        summary: { type: "string" },
+        whyNow: { type: "string" },
+        watchList: {
+          type: "array",
+          minItems: 3,
+          maxItems: 3,
+          items: { type: "string" },
+        },
+        signals: {
+          type: "array",
+          minItems: 3,
+          maxItems: 3,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              label: { type: "string" },
+              value: { type: "string" },
+            },
+            required: ["label", "value"],
+          },
+        },
+      },
+      required: [
+        "featuredStoryId",
+        "title",
+        "summary",
+        "whyNow",
+        "watchList",
+        "signals",
+      ],
+    },
+    systemPrompt:
+      "You are an editor creating a premium current-awareness briefing for a live space dashboard. Use only the supplied article data. Stay factual, concise, and current. Return valid JSON only.",
+    userPayload: {
+      task:
+        "Choose the most consequential featured story from the provided recent space articles and create a concise AI news briefing for OrbitNow.",
+      formatRules: {
+        featuredStoryId:
+          "must match one of the provided article ids, or null if no clear choice exists",
+        title: "short desk-style heading under 7 words",
+        summary: "2 sentences max",
+        whyNow: "1 short sentence explaining why this matters now",
+        watchList: "3 short watch-item strings",
+        signals: "3 short label/value pairs grounded in the supplied stories",
+      },
+      data: {
+        feedFetchedAt: input.feed.fetchedAt,
+        totalResults: input.feed.totalResults,
+        stories,
+      },
+    },
+    messages: {
+      refusal: "OpenAI refused to generate the space news briefing.",
+      empty: "OpenAI did not return any readable news intelligence content.",
+      timeout: "OpenAI news intelligence generation timed out.",
+      rateLimit: "OpenAI is rate-limiting the news intelligence briefing right now.",
+      failure: "OpenAI news intelligence request failed.",
+    },
+  });
+
+  return createOpenAiEnvelope(response);
+}
+
 export function createFallbackMissionBrief(
   input: AiDashboardContext,
 ): MissionBriefApiResponse {
@@ -645,6 +742,57 @@ export function createFallbackViewingConditions(input: {
       {
         label: "Next Launch",
         value: input.context.launch.launch.name,
+      },
+    ],
+  };
+}
+
+export function createFallbackSpaceNewsIntelligence(input: {
+  feed: LatestSpaceNewsFeedResponse;
+}): SpaceNewsIntelligence {
+  const stories = [input.feed.featuredStory, ...input.feed.articles].filter(
+    Boolean,
+  );
+  const leadStory = stories[0] ?? null;
+  const followUpStories = stories.slice(1, 4);
+
+  return {
+    source: "OpenAI",
+    model: "fallback-summary",
+    generatedAt: new Date().toISOString(),
+    featuredStoryId: leadStory?.id ?? null,
+    title: leadStory ? "Current Orbit Brief" : "Current Feed Brief",
+    summary: leadStory
+      ? `${leadStory.title} is the current lead item in the space reporting stream, with fresh coverage joined by ${followUpStories.length} additional recent stories. OrbitNow is surfacing this as the most immediate headline until a newer cluster of reporting arrives.`
+      : "OrbitNow is waiting on a fresh cluster of recent space stories to build the live news briefing.",
+    whyNow: leadStory
+      ? "This matters now because it is the freshest high-signal story in the current space reporting window."
+      : "This matters now because the intelligence panel updates as new stories land in the feed.",
+    watchList: leadStory
+      ? [
+          `Watch whether ${leadStory.source} coverage is joined by additional outlets.`,
+          followUpStories[0]
+            ? `Compare against ${followUpStories[0].title}.`
+            : "Look for follow-up reporting and official statements.",
+          "Refresh the feed later for a new AI-prioritized briefing.",
+        ]
+      : [
+          "Wait for a fresh set of articles to arrive.",
+          "Refresh the feed shortly for a new briefing.",
+          "Use the rest of OrbitNow for live orbital context in the meantime.",
+        ],
+    signals: [
+      {
+        label: "Stories Loaded",
+        value: String(stories.length),
+      },
+      {
+        label: "Lead Source",
+        value: leadStory?.source ?? "No source yet",
+      },
+      {
+        label: "Feed Snapshot",
+        value: input.feed.fetchedAt,
       },
     ],
   };

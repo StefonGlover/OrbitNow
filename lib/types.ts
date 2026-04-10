@@ -270,12 +270,33 @@ export interface SpaceNewsStory {
   authorNames: string[];
 }
 
-export interface LatestSpaceNewsApiResponse {
+export interface LatestSpaceNewsFeedResponse {
   source: "Spaceflight News API";
   fetchedAt: string;
   totalResults: number;
   featuredStory: SpaceNewsStory | null;
   articles: SpaceNewsStory[];
+}
+
+export interface SpaceNewsIntelligenceSignal {
+  label: string;
+  value: string;
+}
+
+export interface SpaceNewsIntelligence {
+  source: "OpenAI";
+  model: string;
+  generatedAt: string;
+  featuredStoryId: number | null;
+  title: string;
+  summary: string;
+  whyNow: string;
+  watchList: string[];
+  signals: SpaceNewsIntelligenceSignal[];
+}
+
+export interface LatestSpaceNewsApiResponse extends LatestSpaceNewsFeedResponse {
+  intelligence: SpaceNewsIntelligence;
 }
 
 export interface MissionBriefDataPoint {

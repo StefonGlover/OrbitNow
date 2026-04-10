@@ -5,7 +5,7 @@ export function LatestSpaceNewsCardFallback() {
     <SectionCard
       title="Latest Space News"
       eyebrow="Intelligence Feed"
-      description="Streaming recent space reporting into a dedicated lower dashboard section."
+      description="Streaming recent space reporting and the AI current brief into a dedicated lower dashboard section."
       className="md:col-span-2 xl:col-span-6"
       isLoading
       loadingLabel="Streaming"

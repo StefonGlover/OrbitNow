@@ -1,5 +1,5 @@
 import { errorResponse, successResponse } from "@/lib/server/api";
-import { fetchLatestSpaceNews } from "@/lib/space-data";
+import { fetchLatestSpaceNews } from "@/lib/news";
 
 export const dynamic = "force-dynamic";
 
