@@ -1,9 +1,15 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { SectionCard } from "@/components/SectionCard";
+import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
+import { useHomeLocationFields } from "@/hooks/useHomeLocationFields";
 import { DEFAULT_OBSERVER } from "@/lib/space-data";
-import { formatCoordinate, formatDateTime } from "@/lib/formatters";
+import {
+  formatAltitude,
+  formatCoordinate,
+  formatDateTimeWithPreferences,
+} from "@/lib/formatters";
 import { ApiRouteResponse, SatellitePositionApiResponse } from "@/lib/types";
 
 const inputClassName =
@@ -13,22 +19,36 @@ const labelClassName = "ui-label mb-2 block";
 type SatelliteSearchProps = {
   enabled: boolean;
   onTrackedSatelliteChange: (satellite: SatellitePositionApiResponse | null) => void;
+  requestedFavoriteTrack?: {
+    noradId: number;
+    token: number;
+  } | null;
 };
 
 export function SatelliteSearch({
   enabled,
   onTrackedSatelliteChange,
+  requestedFavoriteTrack = null,
 }: SatelliteSearchProps) {
+  const { preferences, saveFavoriteObject } = useOrbitPreferences();
+  const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
   const [noradId, setNoradId] = useState("25544");
-  const [observerLat, setObserverLat] = useState(DEFAULT_OBSERVER.latitude.toString());
-  const [observerLng, setObserverLng] = useState(DEFAULT_OBSERVER.longitude.toString());
+  const {
+    latitude: observerLat,
+    longitude: observerLng,
+    setLatitude: setObserverLat,
+    setLongitude: setObserverLng,
+    hasHomeLocation,
+    applyHomeLocation,
+  } = useHomeLocationFields({
+    fallbackLatitude: DEFAULT_OBSERVER.latitude.toString(),
+    fallbackLongitude: DEFAULT_OBSERVER.longitude.toString(),
+  });
   const [result, setResult] = useState<SatellitePositionApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  async function fetchSatellite(currentNoradId: string) {
     if (!enabled) {
       return;
     }
@@ -42,7 +62,7 @@ export function SatelliteSearch({
     });
 
     try {
-      const response = await fetch(`/api/satellite/${noradId}?${params.toString()}`, {
+      const response = await fetch(`/api/satellite/${currentNoradId}?${params.toString()}`, {
         cache: "no-store",
       });
       const json = (await response.json()) as ApiRouteResponse<SatellitePositionApiResponse>;
@@ -65,13 +85,27 @@ export function SatelliteSearch({
     }
   }
 
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await fetchSatellite(noradId);
+  }
+
+  useEffect(() => {
+    if (!requestedFavoriteTrack) {
+      return;
+    }
+
+    setNoradId(requestedFavoriteTrack.noradId.toString());
+    void fetchSatellite(requestedFavoriteTrack.noradId.toString());
+  }, [requestedFavoriteTrack?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const latestPosition = result?.positions[0];
 
   return (
     <SectionCard
       title="Satellite Search"
       eyebrow="NORAD Lookup"
-      description="Search any satellite by NORAD ID without sending your N2YO key to the browser."
+      description="Search any satellite by NORAD ID without sending your N2YO key to the browser. My Orbit can prefill your observer location."
       className="ui-card-feature"
       isLoading={isLoading}
       loadingLabel="Tracking"
@@ -122,6 +156,16 @@ export function SatelliteSearch({
               </div>
             </div>
 
+            {hasHomeLocation ? (
+              <button
+                className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"
+                onClick={applyHomeLocation}
+                type="button"
+              >
+                Use My Orbit location
+              </button>
+            ) : null}
+
             <button
               className="ui-btn-primary w-full"
               disabled={isLoading}
@@ -132,17 +176,34 @@ export function SatelliteSearch({
           </form>
 
           {result ? (
-            <button
-              className="ui-btn-secondary w-full rounded-[20px] py-3 text-sm"
-              onClick={() => {
-                setResult(null);
-                setError(null);
-                onTrackedSatelliteChange(null);
-              }}
-              type="button"
-            >
-              Clear tracked satellite
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="ui-btn-secondary flex-1 rounded-[20px] py-3 text-sm"
+                onClick={() => {
+                  setResult(null);
+                  setError(null);
+                  onTrackedSatelliteChange(null);
+                }}
+                type="button"
+              >
+                Clear tracked satellite
+              </button>
+              <button
+                className="ui-btn-secondary flex-1 rounded-[20px] py-3 text-sm"
+                onClick={() => {
+                  saveFavoriteObject({
+                    id: `satellite-${result.info.satid}`,
+                    type: "satellite",
+                    label: result.info.satname,
+                    subtitle: `NORAD ${result.info.satid}`,
+                    noradId: result.info.satid,
+                  });
+                }}
+                type="button"
+              >
+                Save to My Orbit
+              </button>
+            </div>
           ) : null}
 
           {error ? (
@@ -189,10 +250,17 @@ export function SatelliteSearch({
                       Altitude
                     </p>
                     <p className="mt-2 text-sm text-slate-100">
-                      {latestPosition.sataltitude.toFixed(1)} km
+                      {formatAltitude(
+                        latestPosition.sataltitude,
+                        preferences.display.measurementSystem,
+                      )}
                     </p>
                     <p className="mt-1 text-sm text-slate-300">
-                      {formatDateTime(latestPosition.timestamp)}
+                      {formatDateTimeWithPreferences(
+                        latestPosition.timestamp,
+                        preferences.display,
+                        homeTimeZone,
+                      )}
                     </p>
                   </div>
                 </div>

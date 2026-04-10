@@ -2,7 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { SectionCard } from "@/components/SectionCard";
-import { formatClockTime, formatDateTime } from "@/lib/formatters";
+import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
+import { useHomeLocationFields } from "@/hooks/useHomeLocationFields";
+import {
+  formatClockTimeWithPreferences,
+  formatDateTimeWithPreferences,
+} from "@/lib/formatters";
 import { ApiRouteResponse, VisiblePassesApiResponse } from "@/lib/types";
 
 const inputClassName =
@@ -14,8 +19,19 @@ type PassesCardProps = {
 };
 
 export function PassesCard({ enabled }: PassesCardProps) {
-  const [latitude, setLatitude] = useState("40.7128");
-  const [longitude, setLongitude] = useState("-74.0060");
+  const { preferences } = useOrbitPreferences();
+  const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
+  const {
+    latitude,
+    longitude,
+    setLatitude,
+    setLongitude,
+    hasHomeLocation,
+    applyHomeLocation,
+  } = useHomeLocationFields({
+    fallbackLatitude: "40.7128",
+    fallbackLongitude: "-74.0060",
+  });
   const [result, setResult] = useState<VisiblePassesApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,7 +74,7 @@ export function PassesCard({ enabled }: PassesCardProps) {
     <SectionCard
       title="Visible Passes"
       eyebrow="Observer View"
-      description="Forecasted visual ISS passes for the coordinates you provide."
+      description="Forecasted visual ISS passes for the coordinates you provide, with quick reuse of your saved My Orbit location."
       className="md:col-span-2 xl:col-span-2"
       isLoading={isLoading}
       loadingLabel="Calculating"
@@ -70,7 +86,7 @@ export function PassesCard({ enabled }: PassesCardProps) {
       ) : (
         <div className="space-y-5">
           <form
-            className="ui-panel grid gap-4 p-4 sm:grid-cols-[1fr_1fr_auto]"
+            className="ui-panel grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto]"
             onSubmit={handleSubmit}
           >
             <div>
@@ -95,6 +111,15 @@ export function PassesCard({ enabled }: PassesCardProps) {
                 value={longitude}
               />
             </div>
+            {hasHomeLocation ? (
+              <button
+                className="ui-btn-secondary mt-auto h-[52px]"
+                onClick={applyHomeLocation}
+                type="button"
+              >
+                Use My Orbit
+              </button>
+            ) : null}
             <button
               className="ui-btn-primary mt-auto h-[52px]"
               disabled={isLoading}
@@ -144,16 +169,42 @@ export function PassesCard({ enabled }: PassesCardProps) {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="font-medium text-white">
-                          Pass {index + 1} • {formatDateTime(pass.startUTC)}
+                          Pass {index + 1} •{" "}
+                          {formatDateTimeWithPreferences(
+                            pass.startUTC,
+                            preferences.display,
+                            homeTimeZone,
+                          )}
                         </p>
                         <p className="text-sm text-cyan-200">
                           {Math.round(pass.duration)}s visible
                         </p>
                       </div>
                       <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-3">
-                        <p>Starts: {formatClockTime(pass.startUTC)}</p>
-                        <p>Max: {formatClockTime(pass.maxUTC)}</p>
-                        <p>Ends: {formatClockTime(pass.endUTC)}</p>
+                        <p>
+                          Starts:{" "}
+                          {formatClockTimeWithPreferences(
+                            pass.startUTC,
+                            preferences.display,
+                            homeTimeZone,
+                          )}
+                        </p>
+                        <p>
+                          Max:{" "}
+                          {formatClockTimeWithPreferences(
+                            pass.maxUTC,
+                            preferences.display,
+                            homeTimeZone,
+                          )}
+                        </p>
+                        <p>
+                          Ends:{" "}
+                          {formatClockTimeWithPreferences(
+                            pass.endUTC,
+                            preferences.display,
+                            homeTimeZone,
+                          )}
+                        </p>
                         <p>Max elevation: {Math.round(pass.maxEl)}°</p>
                         <p>Brightness: {pass.mag.toFixed(1)} mag</p>
                         <p>Heading: {pass.maxAzCompass}</p>

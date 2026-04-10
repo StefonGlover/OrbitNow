@@ -1,3 +1,5 @@
+import type { OrbitPreferences } from "@/lib/orbit-preferences";
+
 export interface ApiErrorResponse {
   error: string;
 }
@@ -26,6 +28,56 @@ export interface ApiFailureResponse {
 }
 
 export type ApiRouteResponse<T> = ApiSuccessResponse<T> | ApiFailureResponse;
+
+export interface OrbitSessionUser {
+  id: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface OrbitAuthSessionResponse {
+  authenticated: boolean;
+  user: OrbitSessionUser | null;
+}
+
+export interface OrbitAuthResponse extends OrbitAuthSessionResponse {
+  preferences: OrbitPreferences | null;
+  syncedAt: string | null;
+}
+
+export interface OrbitPreferencesSyncResponse {
+  preferences: OrbitPreferences;
+  syncedAt: string;
+}
+
+export interface OrbitLocationLookupResult {
+  label: string;
+  latitude: number;
+  longitude: number;
+  timeZone: string | null;
+  country: string | null;
+  region: string | null;
+}
+
+export interface OrbitLocationLookupApiResponse {
+  query: string;
+  results: OrbitLocationLookupResult[];
+}
+
+export interface OrbitNotificationAlert {
+  id: string;
+  key: string;
+  type: "iss-pass" | "launch" | "news";
+  title: string;
+  body: string;
+  actionUrl: string | null;
+  createdAt: string;
+}
+
+export interface OrbitAlertsPollApiResponse {
+  alerts: OrbitNotificationAlert[];
+  polledAt: string;
+}
 
 export interface OpenNotifyIssResponse {
   message: "success" | "failure";

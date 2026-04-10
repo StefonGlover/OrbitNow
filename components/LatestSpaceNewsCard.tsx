@@ -2,9 +2,13 @@
 
 import { useEffect } from "react";
 import { CardRefreshButton } from "@/components/CardRefreshButton";
+import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { SectionCard } from "@/components/SectionCard";
 import { usePollingJson } from "@/hooks/usePollingJson";
-import { formatDateTime, formatRelativeTime } from "@/lib/formatters";
+import {
+  formatDateTimeWithPreferences,
+  formatRelativeTime,
+} from "@/lib/formatters";
 import { LatestSpaceNewsApiResponse } from "@/lib/types";
 
 type LatestSpaceNewsCardProps = {
@@ -54,14 +58,20 @@ function StoryImage({
 export function LatestSpaceNewsCard({
   initialData = null,
 }: LatestSpaceNewsCardProps) {
+  const { preferences } = useOrbitPreferences();
+  const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
+  const newsUrl = preferences.newsTopics.length
+    ? `/api/news?topics=${preferences.newsTopics.join(",")}`
+    : "/api/news";
   const {
     data,
     error,
     isLoading,
     isRefreshing,
     refresh,
-  } = usePollingJson<LatestSpaceNewsApiResponse>("/api/news", 600_000, {
+  } = usePollingJson<LatestSpaceNewsApiResponse>(newsUrl, 600_000, {
     initialData,
+    revalidateOnMount: true,
   });
   const isBusy = isLoading || isRefreshing;
 
@@ -110,6 +120,16 @@ export function LatestSpaceNewsCard({
         </div>
       ) : data && data.featuredStory ? (
         <div className="space-y-5">
+          {preferences.newsTopics.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {preferences.newsTopics.map((topic) => (
+                <span className="ui-chip" key={topic}>
+                  {topic.replace("-", " ")}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1.16fr)_minmax(340px,0.84fr)]">
             <a
               className="group overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
@@ -154,7 +174,13 @@ export function LatestSpaceNewsCard({
                   </p>
                 </div>
                 <p className="mt-4 text-xs uppercase tracking-[0.2em] text-cyan-100/70">
-                  Generated {formatDateTime(data.intelligence.generatedAt)} •{" "}
+                  Generated{" "}
+                  {formatDateTimeWithPreferences(
+                    data.intelligence.generatedAt,
+                    preferences.display,
+                    homeTimeZone,
+                  )}{" "}
+                  •{" "}
                   {data.featuredStory.source}
                 </p>
               </div>
@@ -186,13 +212,21 @@ export function LatestSpaceNewsCard({
                     {formatRelativeTime(data.featuredStory.publishedAt)}
                   </p>
                   <p className="mt-1 text-sm text-slate-300">
-                    {formatDateTime(data.featuredStory.publishedAt)}
+                    {formatDateTimeWithPreferences(
+                      data.featuredStory.publishedAt,
+                      preferences.display,
+                      homeTimeZone,
+                    )}
                   </p>
                 </div>
                 <div className="ui-panel">
                   <p className="ui-label">Feed Updated</p>
                   <p className="mt-3 text-sm font-medium text-white">
-                    {formatDateTime(data.fetchedAt)}
+                    {formatDateTimeWithPreferences(
+                      data.fetchedAt,
+                      preferences.display,
+                      homeTimeZone,
+                    )}
                   </p>
                   <p className="mt-1 text-sm text-slate-300">{data.source}</p>
                 </div>
@@ -239,7 +273,11 @@ export function LatestSpaceNewsCard({
                     {truncateText(article.summary, 138)}
                   </p>
                   <p className="mt-4 text-xs uppercase tracking-[0.18em] text-cyan-100/70">
-                    {formatDateTime(article.publishedAt)}
+                    {formatDateTimeWithPreferences(
+                      article.publishedAt,
+                      preferences.display,
+                      homeTimeZone,
+                    )}
                   </p>
                 </a>
               ))}

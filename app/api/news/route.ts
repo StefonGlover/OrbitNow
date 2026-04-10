@@ -1,11 +1,25 @@
+import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/server/api";
 import { fetchLatestSpaceNews } from "@/lib/news";
+import { normalizeOrbitNewsTopics } from "@/lib/orbit-preferences";
+import { getSessionUserFromRequest } from "@/lib/server/auth";
+import { getUserPreferences } from "@/lib/server/db";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const news = await fetchLatestSpaceNews();
+    const topicsParam = request.nextUrl.searchParams.get("topics");
+    const sessionUser = topicsParam ? null : await getSessionUserFromRequest(request);
+    const syncedPreferences = sessionUser
+      ? await getUserPreferences(sessionUser.id)
+      : null;
+    const preferredTopics = topicsParam
+      ? normalizeOrbitNewsTopics(topicsParam.split(","))
+      : syncedPreferences?.newsTopics ?? [];
+    const news = await fetchLatestSpaceNews({
+      preferredTopics,
+    });
 
     return successResponse(news, {
       cacheSeconds: 600,

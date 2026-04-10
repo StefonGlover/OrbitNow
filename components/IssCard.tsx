@@ -1,6 +1,7 @@
+import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { CardRefreshButton } from "@/components/CardRefreshButton";
 import { SectionCard } from "@/components/SectionCard";
-import { formatCoordinate, formatDateTime } from "@/lib/formatters";
+import { formatCoordinate, formatDateTimeWithPreferences } from "@/lib/formatters";
 import { IssApiResponse } from "@/lib/types";
 
 type IssCardProps = {
@@ -11,18 +12,40 @@ type IssCardProps = {
 };
 
 export function IssCard({ data, isLoading, error, onRefresh }: IssCardProps) {
+  const { preferences, saveFavoriteObject } = useOrbitPreferences();
+  const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
+
   return (
     <SectionCard
       title="Live ISS Tracker"
       eyebrow="Orbit Feed"
       description="Polling our server-side ISS route every 5 seconds."
       action={
-        <CardRefreshButton
-          isLoading={isLoading}
-          label="Refresh now"
-          loadingLabel="Refreshing..."
-          onRefresh={onRefresh}
-        />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {data ? (
+            <button
+              className="ui-btn-secondary"
+              onClick={() =>
+                saveFavoriteObject({
+                  id: "satellite-25544",
+                  type: "satellite",
+                  label: "International Space Station",
+                  subtitle: "NORAD 25544",
+                  noradId: 25544,
+                })
+              }
+              type="button"
+            >
+              Save ISS
+            </button>
+          ) : null}
+          <CardRefreshButton
+            isLoading={isLoading}
+            label="Refresh now"
+            loadingLabel="Refreshing..."
+            onRefresh={onRefresh}
+          />
+        </div>
       }
       className="ui-card-feature h-full"
       isLoading={isLoading}
@@ -69,7 +92,11 @@ export function IssCard({ data, isLoading, error, onRefresh }: IssCardProps) {
                 Updated
               </p>
               <p className="mt-3 text-sm font-medium text-slate-100">
-                {formatDateTime(data.timestamp)}
+                {formatDateTimeWithPreferences(
+                  data.timestamp,
+                  preferences.display,
+                  homeTimeZone,
+                )}
               </p>
             </div>
             <div className="ui-panel">

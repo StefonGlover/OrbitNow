@@ -1,9 +1,13 @@
 "use client";
 
 import { CardRefreshButton } from "@/components/CardRefreshButton";
+import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { SectionCard } from "@/components/SectionCard";
 import { usePollingJson } from "@/hooks/usePollingJson";
-import { formatDateTime, formatRelativeFuture } from "@/lib/formatters";
+import {
+  formatDateTimeWithPreferences,
+  formatRelativeFuture,
+} from "@/lib/formatters";
 import { LaunchesApiResponse } from "@/lib/types";
 
 type LaunchesCardProps = {
@@ -11,6 +15,8 @@ type LaunchesCardProps = {
 };
 
 export function LaunchesCard({ initialData = null }: LaunchesCardProps) {
+  const { preferences, saveFavoriteObject } = useOrbitPreferences();
+  const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
   const {
     data,
     error,
@@ -27,7 +33,27 @@ export function LaunchesCard({ initialData = null }: LaunchesCardProps) {
       title="Next Launch"
       eyebrow="Launch Window"
       description="Upcoming launch data proxied from Launch Library 2."
-      action={<CardRefreshButton isLoading={isRefreshing} onRefresh={refresh} />}
+      action={
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {data ? (
+            <button
+              className="ui-btn-secondary"
+              onClick={() =>
+                saveFavoriteObject({
+                  id: `launch-${data.launch.id}`,
+                  type: "launch",
+                  label: data.launch.name,
+                  subtitle: data.launch.provider,
+                })
+              }
+              type="button"
+            >
+              Save mission
+            </button>
+          ) : null}
+          <CardRefreshButton isLoading={isRefreshing} onRefresh={refresh} />
+        </div>
+      }
       className="xl:col-span-2"
       isLoading={isBusy}
       loadingLabel={isLoading ? "Loading" : "Refreshing Launch"}
@@ -62,7 +88,11 @@ export function LaunchesCard({ initialData = null }: LaunchesCardProps) {
                 NET
               </p>
               <p className="mt-2 text-sm font-medium text-white">
-                {formatDateTime(data.launch.net)}
+                {formatDateTimeWithPreferences(
+                  data.launch.net,
+                  preferences.display,
+                  homeTimeZone,
+                )}
               </p>
               <p className="mt-1 text-sm text-cyan-200">
                 {formatRelativeFuture(data.launch.net)}

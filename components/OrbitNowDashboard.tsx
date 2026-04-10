@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { FavoritesDockCard } from "@/components/FavoritesDockCard";
 import { IssCard } from "@/components/IssCard";
 import { LaunchesCard } from "@/components/LaunchesCard";
 import { PassesCard } from "@/components/PassesCard";
@@ -42,6 +43,10 @@ export function OrbitNowDashboard({
   );
   const [trackedSatellite, setTrackedSatellite] =
     useState<SatellitePositionApiResponse | null>(null);
+  const [favoriteTrackRequest, setFavoriteTrackRequest] = useState<{
+    noradId: number;
+    token: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!issState.data) {
@@ -88,6 +93,15 @@ export function OrbitNowDashboard({
           <SatelliteSearch
             enabled={satelliteFeaturesEnabled}
             onTrackedSatelliteChange={setTrackedSatellite}
+            requestedFavoriteTrack={favoriteTrackRequest}
+          />
+          <FavoritesDockCard
+            onTrackFavorite={(noradId) =>
+              setFavoriteTrackRequest({
+                noradId,
+                token: Date.now(),
+              })
+            }
           />
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { OrbitNewsTopic } from "@/lib/orbit-preferences";
 import {
   createFallbackSpaceNewsIntelligence,
   generateSpaceNewsIntelligence,
@@ -15,10 +16,18 @@ function getStories(feed: LatestSpaceNewsFeedResponse): SpaceNewsStory[] {
   );
 }
 
-export async function fetchLatestSpaceNews(): Promise<LatestSpaceNewsApiResponse> {
+export async function fetchLatestSpaceNews(input?: {
+  preferredTopics?: OrbitNewsTopic[];
+}): Promise<LatestSpaceNewsApiResponse> {
   const feed = await fetchLatestSpaceNewsFeed();
-  const intelligence = await generateSpaceNewsIntelligence({ feed }).catch(() =>
-    createFallbackSpaceNewsIntelligence({ feed }),
+  const intelligence = await generateSpaceNewsIntelligence({
+    feed,
+    preferredTopics: input?.preferredTopics,
+  }).catch(() =>
+    createFallbackSpaceNewsIntelligence({
+      feed,
+      preferredTopics: input?.preferredTopics,
+    }),
   );
   const stories = getStories(feed);
   const featuredStory =

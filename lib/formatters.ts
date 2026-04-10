@@ -1,3 +1,5 @@
+import { OrbitDisplayPreferences } from "@/lib/orbit-preferences";
+
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -68,4 +70,59 @@ export function formatTemperature(value: number) {
 
 export function formatWindSpeed(value: number) {
   return `${value.toFixed(1)} m/s`;
+}
+
+function createDisplayDateTimeFormatter(
+  display: OrbitDisplayPreferences,
+  options: Intl.DateTimeFormatOptions,
+  homeTimeZone?: string | null,
+) {
+  const timeZone =
+    display.timeZoneMode === "utc"
+      ? "UTC"
+      : display.timeZoneMode === "home" && homeTimeZone
+        ? homeTimeZone
+        : undefined;
+
+  return new Intl.DateTimeFormat("en-US", {
+    ...options,
+    hour12: display.timeFormat === "12h",
+    timeZone,
+  });
+}
+
+export function formatDateTimeWithPreferences(
+  value: string | number,
+  display: OrbitDisplayPreferences,
+  homeTimeZone?: string | null,
+) {
+  const date = typeof value === "number" ? new Date(value * 1000) : new Date(value);
+
+  return createDisplayDateTimeFormatter(display, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }, homeTimeZone).format(date);
+}
+
+export function formatClockTimeWithPreferences(
+  value: string | number,
+  display: OrbitDisplayPreferences,
+  homeTimeZone?: string | null,
+) {
+  const date = typeof value === "number" ? new Date(value * 1000) : new Date(value);
+
+  return createDisplayDateTimeFormatter(display, {
+    timeStyle: "short",
+  }, homeTimeZone).format(date);
+}
+
+export function formatAltitude(
+  valueInKilometers: number,
+  measurementSystem: OrbitDisplayPreferences["measurementSystem"],
+) {
+  if (measurementSystem === "imperial") {
+    return `${(valueInKilometers * 0.621371).toFixed(1)} mi`;
+  }
+
+  return `${valueInKilometers.toFixed(1)} km`;
 }

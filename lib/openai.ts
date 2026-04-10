@@ -1,4 +1,5 @@
 import { AiDashboardContext } from "@/lib/ai-context";
+import { OrbitNewsTopic } from "@/lib/orbit-preferences";
 import {
   CuriosityInsightsApiResponse,
   LatestSpaceNewsFeedResponse,
@@ -495,12 +496,14 @@ export async function generateViewingConditions(input: {
 
 export async function generateSpaceNewsIntelligence(input: {
   feed: LatestSpaceNewsFeedResponse;
+  preferredTopics?: OrbitNewsTopic[];
 }): Promise<SpaceNewsIntelligence> {
   const stories = [input.feed.featuredStory, ...input.feed.articles].filter(
     Boolean,
   );
   const cacheKey = [
     "space-news-intelligence",
+    ...(input.preferredTopics ?? []),
     ...stories.map((story) => `${story!.id}-${story!.publishedAt}`),
   ].join(":");
 
@@ -573,6 +576,7 @@ export async function generateSpaceNewsIntelligence(input: {
       data: {
         feedFetchedAt: input.feed.fetchedAt,
         totalResults: input.feed.totalResults,
+        preferredTopics: input.preferredTopics ?? [],
         stories,
       },
     },
@@ -749,6 +753,7 @@ export function createFallbackViewingConditions(input: {
 
 export function createFallbackSpaceNewsIntelligence(input: {
   feed: LatestSpaceNewsFeedResponse;
+  preferredTopics?: OrbitNewsTopic[];
 }): SpaceNewsIntelligence {
   const stories = [input.feed.featuredStory, ...input.feed.articles].filter(
     Boolean,
@@ -766,7 +771,7 @@ export function createFallbackSpaceNewsIntelligence(input: {
       ? `${leadStory.title} is the current lead item in the space reporting stream, with fresh coverage joined by ${followUpStories.length} additional recent stories. OrbitNow is surfacing this as the most immediate headline until a newer cluster of reporting arrives.`
       : "OrbitNow is waiting on a fresh cluster of recent space stories to build the live news briefing.",
     whyNow: leadStory
-      ? "This matters now because it is the freshest high-signal story in the current space reporting window."
+      ? `This matters now because it is the freshest high-signal story in the current space reporting window${input.preferredTopics?.length ? `, with emphasis on ${input.preferredTopics.join(", ")}` : ""}.`
       : "This matters now because the intelligence panel updates as new stories land in the feed.",
     watchList: leadStory
       ? [

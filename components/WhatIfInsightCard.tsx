@@ -1,16 +1,19 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { SectionCard } from "@/components/SectionCard";
 import { ApiRouteResponse, WhatIfInsightApiResponse } from "@/lib/types";
 
-const suggestionPrompts = [
-  "What if the ISS had to raise its orbit tonight?",
-  "What if the next launch slips by 24 hours?",
-  "What if I tracked a satellite close to the ISS path?",
-];
-
 export function WhatIfInsightCard() {
+  const { preferences } = useOrbitPreferences();
+  const suggestionPrompts = [
+    preferences.homeLocation
+      ? `What if the ISS passed directly over ${preferences.homeLocation.label} tonight?`
+      : "What if the ISS had to raise its orbit tonight?",
+    "What if the next launch slips by 24 hours?",
+    "What if I tracked a satellite close to the ISS path?",
+  ];
   const [question, setQuestion] = useState(suggestionPrompts[0]);
   const [result, setResult] = useState<WhatIfInsightApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);

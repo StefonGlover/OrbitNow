@@ -2,9 +2,11 @@
 
 import { FormEvent, useState } from "react";
 import { SectionCard } from "@/components/SectionCard";
+import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
+import { useHomeLocationFields } from "@/hooks/useHomeLocationFields";
 import {
   formatCoordinate,
-  formatDateTime,
+  formatDateTimeWithPreferences,
 } from "@/lib/formatters";
 import { ApiRouteResponse, ViewingConditionsApiResponse } from "@/lib/types";
 
@@ -17,8 +19,19 @@ type WeatherVisibilityCardProps = {
 };
 
 export function WeatherVisibilityCard({ enabled }: WeatherVisibilityCardProps) {
-  const [latitude, setLatitude] = useState("40.7128");
-  const [longitude, setLongitude] = useState("-74.0060");
+  const { preferences } = useOrbitPreferences();
+  const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
+  const {
+    latitude,
+    longitude,
+    setLatitude,
+    setLongitude,
+    hasHomeLocation,
+    applyHomeLocation,
+  } = useHomeLocationFields({
+    fallbackLatitude: "40.7128",
+    fallbackLongitude: "-74.0060",
+  });
   const [result, setResult] = useState<ViewingConditionsApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +74,7 @@ export function WeatherVisibilityCard({ enabled }: WeatherVisibilityCardProps) {
     <SectionCard
       title="Viewing Conditions"
       eyebrow="AI Sky Brief"
-      description="AI-generated skywatching guidance from your location and live orbital context. It does not use live weather measurements."
+      description="AI-generated skywatching guidance from your location and live orbital context. It can reuse your My Orbit home base and does not use live weather measurements."
       className="md:col-span-2 xl:col-span-2"
       isLoading={isLoading}
       loadingLabel="Checking"
@@ -73,7 +86,7 @@ export function WeatherVisibilityCard({ enabled }: WeatherVisibilityCardProps) {
       ) : (
         <div className="space-y-5">
           <form
-            className="ui-panel grid gap-4 p-4 sm:grid-cols-[1fr_1fr_auto]"
+            className="ui-panel grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto]"
             onSubmit={handleSubmit}
           >
             <div>
@@ -98,6 +111,15 @@ export function WeatherVisibilityCard({ enabled }: WeatherVisibilityCardProps) {
                 value={longitude}
               />
             </div>
+            {hasHomeLocation ? (
+              <button
+                className="ui-btn-secondary mt-auto h-[52px]"
+                onClick={applyHomeLocation}
+                type="button"
+              >
+                Use My Orbit
+              </button>
+            ) : null}
             <button
               className="ui-btn-primary mt-auto h-[52px]"
               disabled={isLoading}
@@ -168,7 +190,13 @@ export function WeatherVisibilityCard({ enabled }: WeatherVisibilityCardProps) {
               </div>
 
               <div className="ui-panel text-sm text-slate-300">
-                Generated {formatDateTime(result.generatedAt)} • {result.confidenceNote}
+                Generated{" "}
+                {formatDateTimeWithPreferences(
+                  result.generatedAt,
+                  preferences.display,
+                  homeTimeZone,
+                )}{" "}
+                • {result.confidenceNote}
               </div>
             </div>
           ) : null}

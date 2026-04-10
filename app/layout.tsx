@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { AppNavigation } from "@/components/AppNavigation";
+import { OrbitPreferencesProvider } from "@/components/providers/OrbitPreferencesProvider";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -29,7 +31,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased selection:bg-cyan-400/20 selection:text-white`}
       >
-        {children}
+        <OrbitPreferencesProvider>
+          <AppNavigation />
+          {children}
+        </OrbitPreferencesProvider>
       </body>
     </html>
   );

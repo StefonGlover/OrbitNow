@@ -35,6 +35,22 @@ export function badRequest(
   });
 }
 
+export function unauthorized(message: string) {
+  return new RouteError({
+    message,
+    code: "UNAUTHORIZED",
+    status: 401,
+  });
+}
+
+export function conflictError(message: string) {
+  return new RouteError({
+    message,
+    code: "CONFLICT",
+    status: 409,
+  });
+}
+
 export function serverConfigError(message: string) {
   return new RouteError({
     message,
