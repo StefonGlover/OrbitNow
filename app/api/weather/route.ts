@@ -5,6 +5,7 @@ import {
   createFallbackViewingConditions,
   generateViewingConditions,
 } from "@/lib/openai";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { parseLatitude, parseLongitude } from "@/lib/server/validation";
 import { buildViewingBriefInputs } from "@/lib/viewing-brief";
 
@@ -12,6 +13,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
+    enforceRateLimit(request, {
+      scope: "ai-viewing-conditions",
+      maxRequests: 20,
+      windowMs: 1000 * 60 * 15,
+      message: "Viewing brief requests are coming in too quickly. Please try again shortly.",
+    });
+
     const latitude = parseLatitude(request.nextUrl.searchParams.get("lat"));
     const longitude = parseLongitude(request.nextUrl.searchParams.get("lon"));
     const observer = buildViewingBriefInputs(latitude, longitude);

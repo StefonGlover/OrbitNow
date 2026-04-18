@@ -4,12 +4,20 @@ import {
   generateWhatIfInsight,
 } from "@/lib/openai";
 import { badRequest, errorResponse, successResponse } from "@/lib/server/api";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { parseRequiredText } from "@/lib/server/validation";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    enforceRateLimit(request, {
+      scope: "ai-what-if",
+      maxRequests: 12,
+      windowMs: 1000 * 60 * 15,
+      message: "Scenario requests are coming in too quickly. Please wait a moment and try again.",
+    });
+
     let body: unknown;
 
     try {

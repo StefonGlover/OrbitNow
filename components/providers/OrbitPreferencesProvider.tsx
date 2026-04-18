@@ -24,8 +24,9 @@ import {
   ORBIT_PREFERENCES_STORAGE_KEY,
 } from "@/lib/orbit-preferences";
 import type {
-  ApiRouteResponse,
-  OrbitAlertsPollApiResponse,
+    ApiRouteResponse,
+    OrbitAlertsAckApiResponse,
+    OrbitAlertsPollApiResponse,
   OrbitAuthResponse,
   OrbitAuthSessionResponse,
   OrbitNotificationAlert,
@@ -95,6 +96,19 @@ async function readApiData<T>(input: RequestInfo | URL, init?: RequestInit) {
   }
 
   return json.data;
+}
+
+async function acknowledgeAlertsOnServer(keys: string[]) {
+  if (keys.length === 0) {
+    return;
+  }
+
+  await readApiData<OrbitAlertsAckApiResponse>("/api/alerts/ack", {
+    method: "POST",
+    body: JSON.stringify({
+      keys,
+    }),
+  });
 }
 
 function addAlertsToCollection(
@@ -382,7 +396,8 @@ export function OrbitPreferencesProvider({
     const hasActiveAlertPreference =
       preferences.alerts.issOverheadSoon ||
       preferences.alerts.launchReminders ||
-      preferences.alerts.majorNewsAlerts;
+      preferences.alerts.majorNewsAlerts ||
+      preferences.alerts.nightlyPlannerDigest;
 
     if (!hasActiveAlertPreference) {
       return;
@@ -405,6 +420,12 @@ export function OrbitPreferencesProvider({
 
         setRecentAlerts((currentAlerts) =>
           addAlertsToCollection(currentAlerts, payload.alerts),
+        );
+
+        void acknowledgeAlertsOnServer(payload.alerts.map((alert) => alert.key)).catch(
+          () => {
+            // If acknowledgment fails, the alerts can be safely retried on the next poll.
+          },
         );
 
         if (notificationPermission !== "granted" || !("Notification" in window)) {
@@ -445,6 +466,7 @@ export function OrbitPreferencesProvider({
     preferences.alerts.issOverheadSoon,
     preferences.alerts.launchReminders,
     preferences.alerts.majorNewsAlerts,
+    preferences.alerts.nightlyPlannerDigest,
     preferences.homeLocation?.label,
     preferences.homeLocation?.latitude,
     preferences.homeLocation?.longitude,

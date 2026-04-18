@@ -209,6 +209,7 @@ export async function generateMissionBrief(
     cacheKey,
     ttlMs: 900_000,
     staleWhileErrorMs: 3_600_000,
+    timeoutMs: 12_000,
     schemaName: "mission_brief",
     schema: {
       type: "object",
@@ -296,6 +297,7 @@ export async function generateCuriosityInsights(
     cacheKey,
     ttlMs: 1_800_000,
     staleWhileErrorMs: 7_200_000,
+    timeoutMs: 12_000,
     schemaName: "curiosity_insights",
     schema: {
       type: "object",
@@ -360,7 +362,7 @@ export async function generateWhatIfInsight(input: {
     cacheKey,
     ttlMs: 3_600_000,
     staleWhileErrorMs: 21_600_000,
-    timeoutMs: 30_000,
+    timeoutMs: 15_000,
     schemaName: "what_if_insight",
     schema: {
       type: "object",
@@ -430,6 +432,7 @@ export async function generateViewingConditions(input: {
     cacheKey,
     ttlMs: 900_000,
     staleWhileErrorMs: 3_600_000,
+    timeoutMs: 12_000,
     schemaName: "viewing_conditions",
     schema: {
       type: "object",
@@ -518,6 +521,7 @@ export async function generateSpaceNewsIntelligence(input: {
     cacheKey,
     ttlMs: 600_000,
     staleWhileErrorMs: 3_600_000,
+    timeoutMs: 12_000,
     schemaName: "space_news_intelligence",
     schema: {
       type: "object",

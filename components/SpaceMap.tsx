@@ -15,10 +15,12 @@ import { IssApiResponse, SatellitePositionApiResponse } from "@/lib/types";
 type SpaceMapProps = {
   iss: IssApiResponse | null;
   issTrail: Array<[number, number]>;
-  trackedSatellite: SatellitePositionApiResponse | null;
+  trackedSatellites: SatellitePositionApiResponse[];
   isLoading: boolean;
   error: string | null;
 };
+
+const TRACK_COLORS = ["#a78bfa", "#22d3ee", "#f97316", "#a3e635"];
 
 function splitWorldSafePath(points: Array<[number, number]>) {
   return points.reduce<Array<Array<[number, number]>>>((segments, point) => {
@@ -45,7 +47,7 @@ function splitWorldSafePath(points: Array<[number, number]>) {
 export function SpaceMap({
   iss,
   issTrail,
-  trackedSatellite,
+  trackedSatellites,
   isLoading,
   error,
 }: SpaceMapProps) {
@@ -183,49 +185,56 @@ export function SpaceMap({
 
       satelliteLayerRef.current.clearLayers();
 
-      if (!trackedSatellite || trackedSatellite.positions.length === 0) {
+      if (trackedSatellites.length === 0) {
         return;
       }
 
       const L = await import("leaflet");
 
-      const coordinates = trackedSatellite.positions.map(
-        (position) =>
-          [position.satlatitude, position.satlongitude] as [number, number],
-      );
-
-      splitWorldSafePath(coordinates).forEach((segment, index) => {
-        L.polyline(segment, {
-          color: "#a78bfa",
-          weight: 2.5,
-          opacity: 0.92,
-        }).addTo(satelliteLayerRef.current!);
-
-        if (index === 0 && segment[0]) {
-          L.circleMarker(segment[0], {
-            radius: 6,
-            color: "#d8b4fe",
-            weight: 2,
-            fillColor: "#8b5cf6",
-            fillOpacity: 1,
-          })
-            .bindTooltip(trackedSatellite.info.satname, {
-              direction: "top",
-            })
-            .addTo(satelliteLayerRef.current!);
+      trackedSatellites.forEach((trackedSatellite, trackedIndex) => {
+        if (trackedSatellite.positions.length === 0) {
+          return;
         }
+
+        const color = TRACK_COLORS[trackedIndex % TRACK_COLORS.length];
+        const coordinates = trackedSatellite.positions.map(
+          (position) =>
+            [position.satlatitude, position.satlongitude] as [number, number],
+        );
+
+        splitWorldSafePath(coordinates).forEach((segment, segmentIndex) => {
+          L.polyline(segment, {
+            color,
+            weight: 2.5,
+            opacity: 0.92,
+          }).addTo(satelliteLayerRef.current!);
+
+          if (segmentIndex === 0 && segment[0]) {
+            L.circleMarker(segment[0], {
+              radius: 6,
+              color: "#d8b4fe",
+              weight: 2,
+              fillColor: color,
+              fillOpacity: 1,
+            })
+              .bindTooltip(trackedSatellite.info.satname, {
+                direction: "top",
+              })
+              .addTo(satelliteLayerRef.current!);
+          }
+        });
       });
     }
 
     void renderSatelliteTrack();
-  }, [trackedSatellite]);
+  }, [trackedSatellites]);
 
   return (
     <SectionCard
       title="Orbital Map"
       eyebrow="Ground Track"
       description="Live ISS position, recent orbit trail, and optional tracked satellite path in a dark mission-control surface."
-      className="ui-card-hero h-full xl:col-span-1"
+      className="ui-card-hero min-h-0 self-start xl:col-span-1"
       isLoading={isLoading}
       loadingLabel="Tracking"
     >
@@ -270,10 +279,13 @@ export function SpaceMap({
               <span className="h-0.5 w-6 rounded-full bg-cyan-300/80" />
               <span>{issTrail.length} recent ISS samples</span>
             </div>
-            {trackedSatellite ? (
+            {trackedSatellites.length > 0 ? (
               <div className="mt-2 flex items-center gap-2">
                 <span className="h-0.5 w-6 rounded-full bg-violet-300/90" />
-                <span>{trackedSatellite.info.satname}</span>
+                <span>
+                  {trackedSatellites.length} tracked satellite
+                  {trackedSatellites.length === 1 ? "" : "s"}
+                </span>
               </div>
             ) : null}
           </div>
@@ -290,7 +302,11 @@ export function SpaceMap({
             <div className="rounded-[20px] border border-white/10 bg-slate-950/76 px-4 py-3 text-xs backdrop-blur-xl">
               <p className="ui-label">Overlay Mode</p>
               <p className="mt-2 text-sm font-medium text-white">
-                {trackedSatellite ? "Dual-track view" : "ISS focused"}
+                {trackedSatellites.length > 1
+                  ? "Fleet tracking"
+                  : trackedSatellites.length === 1
+                    ? "Dual-track view"
+                    : "ISS focused"}
               </p>
             </div>
           </div>

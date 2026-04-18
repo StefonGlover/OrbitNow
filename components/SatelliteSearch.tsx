@@ -19,16 +19,22 @@ const labelClassName = "ui-label mb-2 block";
 type SatelliteSearchProps = {
   enabled: boolean;
   onTrackedSatelliteChange: (satellite: SatellitePositionApiResponse | null) => void;
+  onRemoveTrackedSatellite: (noradId: number) => void;
+  onClearTrackedSatellites: () => void;
   requestedFavoriteTrack?: {
     noradId: number;
     token: number;
   } | null;
+  trackedSatellites: SatellitePositionApiResponse[];
 };
 
 export function SatelliteSearch({
   enabled,
   onTrackedSatelliteChange,
+  onRemoveTrackedSatellite,
+  onClearTrackedSatellites,
   requestedFavoriteTrack = null,
+  trackedSatellites,
 }: SatelliteSearchProps) {
   const { preferences, saveFavoriteObject } = useOrbitPreferences();
   const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
@@ -47,6 +53,9 @@ export function SatelliteSearch({
   const [result, setResult] = useState<SatellitePositionApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const trackedSatelliteIds = new Set(
+    trackedSatellites.map((satellite) => satellite.info.satid),
+  );
 
   async function fetchSatellite(currentNoradId: string) {
     if (!enabled) {
@@ -79,7 +88,6 @@ export function SatelliteSearch({
       setError(
         error instanceof Error ? error.message : "Unable to fetch satellite data.",
       );
-      onTrackedSatelliteChange(null);
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +113,7 @@ export function SatelliteSearch({
     <SectionCard
       title="Satellite Search"
       eyebrow="NORAD Lookup"
-      description="Search any satellite by NORAD ID without sending your N2YO key to the browser. My Orbit can prefill your observer location."
+      description="Search and track a small fleet of satellites by NORAD ID without sending your N2YO key to the browser. My Orbit can prefill your observer location."
       className="ui-card-feature"
       isLoading={isLoading}
       loadingLabel="Tracking"
@@ -171,7 +179,7 @@ export function SatelliteSearch({
               disabled={isLoading}
               type="submit"
             >
-              {isLoading ? "Searching orbit..." : "Search satellite"}
+              {isLoading ? "Searching orbit..." : "Track satellite"}
             </button>
           </form>
 
@@ -182,11 +190,11 @@ export function SatelliteSearch({
                 onClick={() => {
                   setResult(null);
                   setError(null);
-                  onTrackedSatelliteChange(null);
+                  onRemoveTrackedSatellite(result.info.satid);
                 }}
                 type="button"
               >
-                Clear tracked satellite
+                Stop tracking
               </button>
               <button
                 className="ui-btn-secondary flex-1 rounded-[20px] py-3 text-sm"
@@ -203,6 +211,57 @@ export function SatelliteSearch({
               >
                 Save to My Orbit
               </button>
+            </div>
+          ) : null}
+
+          {trackedSatellites.length > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="ui-label">Tracked Fleet</p>
+                <button
+                  className="ui-btn-secondary rounded-[18px] px-4 py-2.5 text-sm"
+                  onClick={onClearTrackedSatellites}
+                  type="button"
+                >
+                  Clear all
+                </button>
+              </div>
+              {trackedSatellites.map((trackedSatellite) => {
+                const latestTrackedPosition = trackedSatellite.positions[0];
+
+                return (
+                  <div className="ui-panel p-4" key={trackedSatellite.info.satid}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="ui-chip">NORAD {trackedSatellite.info.satid}</span>
+                          <span className="ui-chip ui-chip-live">Tracked</span>
+                        </div>
+                        <p className="mt-3 text-sm font-semibold text-white">
+                          {trackedSatellite.info.satname}
+                        </p>
+                        {latestTrackedPosition ? (
+                          <p className="mt-2 text-sm text-slate-300">
+                            {formatDateTimeWithPreferences(
+                              latestTrackedPosition.timestamp,
+                              preferences.display,
+                              homeTimeZone,
+                            )}{" "}
+                            • {Math.round(latestTrackedPosition.elevation)}° elevation
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        className="ui-btn-secondary rounded-[18px] px-4 py-2.5 text-sm"
+                        onClick={() => onRemoveTrackedSatellite(trackedSatellite.info.satid)}
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : null}
 
@@ -229,6 +288,11 @@ export function SatelliteSearch({
                 </p>
                 <p className="mt-1 text-sm text-slate-300">
                   NORAD {result.info.satid} • {result.positions.length} position points
+                </p>
+                <p className="mt-3 text-sm text-cyan-200">
+                  {trackedSatelliteIds.has(result.info.satid)
+                    ? "Currently active in the tracked fleet."
+                    : "Ready to add to the tracked fleet."}
                 </p>
               </div>
 

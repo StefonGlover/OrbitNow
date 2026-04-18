@@ -4,10 +4,13 @@ import { ReactNode, useEffect, useState } from "react";
 import { FavoritesDockCard } from "@/components/FavoritesDockCard";
 import { IssCard } from "@/components/IssCard";
 import { LaunchesCard } from "@/components/LaunchesCard";
+import { MissionDeckCard } from "@/components/MissionDeckCard";
 import { PassesCard } from "@/components/PassesCard";
 import { PeopleInSpaceCard } from "@/components/PeopleInSpaceCard";
 import { SatelliteSearch } from "@/components/SatelliteSearch";
+import { SkyMapCard } from "@/components/SkyMapCard";
 import { SpaceMap } from "@/components/SpaceMap";
+import { TonightPlannerCard } from "@/components/TonightPlannerCard";
 import { WeatherVisibilityCard } from "@/components/WeatherVisibilityCard";
 import { usePollingJson } from "@/hooks/usePollingJson";
 import {
@@ -41,12 +44,35 @@ export function OrbitNowDashboard({
   const [issTrail, setIssTrail] = useState<Array<[number, number]>>(
     initialIss ? [[initialIss.latitude, initialIss.longitude]] : [],
   );
-  const [trackedSatellite, setTrackedSatellite] =
-    useState<SatellitePositionApiResponse | null>(null);
+  const [trackedSatellites, setTrackedSatellites] = useState<
+    SatellitePositionApiResponse[]
+  >([]);
   const [favoriteTrackRequest, setFavoriteTrackRequest] = useState<{
     noradId: number;
     token: number;
   } | null>(null);
+
+  function trackSatellite(satellite: SatellitePositionApiResponse | null) {
+    if (!satellite) {
+      return;
+    }
+
+    setTrackedSatellites((currentSatellites) =>
+      [
+        satellite,
+        ...currentSatellites.filter(
+          (currentSatellite) =>
+            currentSatellite.info.satid !== satellite.info.satid,
+        ),
+      ].slice(0, 4),
+    );
+  }
+
+  function removeTrackedSatellite(noradId: number) {
+    setTrackedSatellites((currentSatellites) =>
+      currentSatellites.filter((satellite) => satellite.info.satid !== noradId),
+    );
+  }
 
   useEffect(() => {
     if (!issState.data) {
@@ -75,13 +101,13 @@ export function OrbitNowDashboard({
 
   return (
     <div className="space-y-7 lg:space-y-8">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(360px,0.82fr)]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(360px,0.82fr)]">
         <SpaceMap
           error={issState.error}
           isLoading={issBusy}
           iss={issState.data}
           issTrail={issTrail}
-          trackedSatellite={trackedSatellite}
+          trackedSatellites={trackedSatellites}
         />
         <div className="grid gap-6 self-start md:grid-cols-2 xl:grid-cols-1">
           <IssCard
@@ -92,8 +118,11 @@ export function OrbitNowDashboard({
           />
           <SatelliteSearch
             enabled={satelliteFeaturesEnabled}
-            onTrackedSatelliteChange={setTrackedSatellite}
+            onClearTrackedSatellites={() => setTrackedSatellites([])}
+            onRemoveTrackedSatellite={removeTrackedSatellite}
+            onTrackedSatelliteChange={trackSatellite}
             requestedFavoriteTrack={favoriteTrackRequest}
+            trackedSatellites={trackedSatellites}
           />
           <FavoritesDockCard
             onTrackFavorite={(noradId) =>
@@ -108,10 +137,13 @@ export function OrbitNowDashboard({
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-6">
         {children}
+        <MissionDeckCard />
         <PeopleInSpaceCard initialData={initialAstronauts} />
         <LaunchesCard initialData={initialLaunch} />
         <PassesCard enabled={satelliteFeaturesEnabled} />
         <WeatherVisibilityCard enabled={viewingEnabled} />
+        <TonightPlannerCard />
+        <SkyMapCard trackedSatellites={trackedSatellites} />
       </div>
     </div>
   );

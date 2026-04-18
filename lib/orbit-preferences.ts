@@ -74,6 +74,11 @@ export interface OrbitAlertPreferences {
   issOverheadSoon: boolean;
   launchReminders: boolean;
   majorNewsAlerts: boolean;
+  nightlyPlannerDigest: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStartHour: number;
+  quietHoursEndHour: number;
+  launchReminderLeadHours: number;
 }
 
 export interface OrbitDisplayPreferences {
@@ -101,6 +106,24 @@ function normalizeFavoriteType(value: unknown): OrbitFavoriteObjectType {
   return "satellite";
 }
 
+function normalizeHourValue(value: unknown, fallback: number) {
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 23
+    ? value
+    : fallback;
+}
+
+function normalizeLeadHours(value: unknown, fallback: number) {
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 72
+    ? value
+    : fallback;
+}
+
 export function createDefaultOrbitPreferences(): OrbitPreferences {
   return {
     version: 1,
@@ -112,6 +135,11 @@ export function createDefaultOrbitPreferences(): OrbitPreferences {
       issOverheadSoon: false,
       launchReminders: true,
       majorNewsAlerts: true,
+      nightlyPlannerDigest: false,
+      quietHoursEnabled: false,
+      quietHoursStartHour: 22,
+      quietHoursEndHour: 7,
+      launchReminderLeadHours: 24,
     },
     display: {
       themeMode: "midnight",
@@ -158,7 +186,13 @@ export function hasMeaningfulOrbitPreferences(preferences: OrbitPreferences) {
   if (
     preferences.alerts.issOverheadSoon !== defaults.alerts.issOverheadSoon ||
     preferences.alerts.launchReminders !== defaults.alerts.launchReminders ||
-    preferences.alerts.majorNewsAlerts !== defaults.alerts.majorNewsAlerts
+    preferences.alerts.majorNewsAlerts !== defaults.alerts.majorNewsAlerts ||
+    preferences.alerts.nightlyPlannerDigest !== defaults.alerts.nightlyPlannerDigest ||
+    preferences.alerts.quietHoursEnabled !== defaults.alerts.quietHoursEnabled ||
+    preferences.alerts.quietHoursStartHour !== defaults.alerts.quietHoursStartHour ||
+    preferences.alerts.quietHoursEndHour !== defaults.alerts.quietHoursEndHour ||
+    preferences.alerts.launchReminderLeadHours !==
+      defaults.alerts.launchReminderLeadHours
   ) {
     return true;
   }
@@ -276,6 +310,22 @@ export function normalizeOrbitPreferences(value: unknown): OrbitPreferences {
         input.alerts?.launchReminders ?? defaults.alerts.launchReminders,
       majorNewsAlerts:
         input.alerts?.majorNewsAlerts ?? defaults.alerts.majorNewsAlerts,
+      nightlyPlannerDigest:
+        input.alerts?.nightlyPlannerDigest ?? defaults.alerts.nightlyPlannerDigest,
+      quietHoursEnabled:
+        input.alerts?.quietHoursEnabled ?? defaults.alerts.quietHoursEnabled,
+      quietHoursStartHour: normalizeHourValue(
+        input.alerts?.quietHoursStartHour,
+        defaults.alerts.quietHoursStartHour,
+      ),
+      quietHoursEndHour: normalizeHourValue(
+        input.alerts?.quietHoursEndHour,
+        defaults.alerts.quietHoursEndHour,
+      ),
+      launchReminderLeadHours: normalizeLeadHours(
+        input.alerts?.launchReminderLeadHours,
+        defaults.alerts.launchReminderLeadHours,
+      ),
     },
     display: {
       themeMode:

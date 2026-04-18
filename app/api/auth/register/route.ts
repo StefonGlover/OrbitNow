@@ -1,16 +1,26 @@
-import { conflictError, errorResponse, badRequest, successResponse } from "@/lib/server/api";
+import { errorResponse, badRequest, successResponse } from "@/lib/server/api";
 import {
   applySessionCookie,
+  assertSessionSecretConfigured,
   hashPassword,
   validateCredentialInput,
 } from "@/lib/server/auth";
-import { createUserRecord, findUserByEmail, toClientSession } from "@/lib/server/db";
+import { createUserRecord, toClientSession } from "@/lib/server/db";
+import { enforceRateLimit } from "@/lib/server/rate-limit";
 import type { OrbitAuthResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    assertSessionSecretConfigured();
+    enforceRateLimit(request, {
+      scope: "auth-register",
+      maxRequests: 5,
+      windowMs: 1000 * 60 * 15,
+      message: "Too many sign-up attempts. Please try again in a few minutes.",
+    });
+
     let body: unknown;
 
     try {
@@ -23,10 +33,6 @@ export async function POST(request: Request) {
       typeof body === "object" && body ? (body as Record<string, unknown>) : {},
     );
 
-    if (await findUserByEmail(email)) {
-      throw conflictError("An account with that email already exists.");
-    }
-
     const passwordResult = hashPassword(password);
     const user = await createUserRecord({
       email,
@@ -37,10 +43,13 @@ export async function POST(request: Request) {
       authenticated: true,
       user: toClientSession(user),
       preferences: user.preferences,
-      syncedAt: user.updatedAt,
+      syncedAt: user.preferences.updatedAt,
     };
 
-    return applySessionCookie(successResponse(payload), user.id);
+    return applySessionCookie(successResponse(payload), {
+      userId: user.id,
+      version: user.sessionVersion,
+    });
   } catch (error) {
     return errorResponse(error);
   }

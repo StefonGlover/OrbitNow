@@ -51,6 +51,18 @@ export function conflictError(message: string) {
   });
 }
 
+export function tooManyRequests(
+  message: string,
+  details?: Record<string, string | number | boolean | null | undefined>,
+) {
+  return new RouteError({
+    message,
+    code: "TOO_MANY_REQUESTS",
+    status: 429,
+    details,
+  });
+}
+
 export function serverConfigError(message: string) {
   return new RouteError({
     message,

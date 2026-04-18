@@ -1,7 +1,7 @@
 import { getSessionUserFromRequest } from "@/lib/server/auth";
 import { getUserPreferences, updateUserPreferences } from "@/lib/server/db";
 import { badRequest, errorResponse, successResponse, unauthorized } from "@/lib/server/api";
-import { normalizeOrbitPreferences } from "@/lib/orbit-preferences";
+import { validateOrbitPreferencesInput } from "@/lib/server/preferences-validation";
 import type { OrbitPreferencesSyncResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,12 @@ export async function PUT(request: Request) {
       body && typeof body === "object" && "preferences" in body
         ? (body as { preferences: unknown }).preferences
         : body;
-    const nextPreferences = normalizeOrbitPreferences(rawPreferences);
+
+    if (rawPreferences === undefined) {
+      throw badRequest("preferences is required.");
+    }
+
+    const nextPreferences = validateOrbitPreferencesInput(rawPreferences);
     const savedPreferences = await updateUserPreferences(user.id, nextPreferences);
 
     if (!savedPreferences) {

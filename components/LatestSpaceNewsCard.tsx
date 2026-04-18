@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CardRefreshButton } from "@/components/CardRefreshButton";
 import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { SectionCard } from "@/components/SectionCard";
@@ -32,7 +32,13 @@ function StoryImage({
   title: string;
   className: string;
 }) {
-  if (!imageUrl) {
+  const [hasImageError, setHasImageError] = useState(false);
+
+  useEffect(() => {
+    setHasImageError(false);
+  }, [imageUrl]);
+
+  if (!imageUrl || hasImageError) {
     return (
       <div
         aria-hidden="true"
@@ -50,6 +56,7 @@ function StoryImage({
     <img
       alt={title}
       className={className}
+      onError={() => setHasImageError(true)}
       src={imageUrl}
     />
   );
@@ -60,6 +67,9 @@ export function LatestSpaceNewsCard({
 }: LatestSpaceNewsCardProps) {
   const { preferences } = useOrbitPreferences();
   const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
+  const [selectedStoryId, setSelectedStoryId] = useState<number | null>(
+    initialData?.featuredStory?.id ?? null,
+  );
   const newsUrl = preferences.newsTopics.length
     ? `/api/news?topics=${preferences.newsTopics.join(",")}`
     : "/api/news";
@@ -74,6 +84,15 @@ export function LatestSpaceNewsCard({
     revalidateOnMount: true,
   });
   const isBusy = isLoading || isRefreshing;
+  const stories = data?.featuredStory
+    ? [data.featuredStory, ...data.articles]
+    : data?.articles ?? [];
+  const selectedStory =
+    stories.find((story) => story.id === selectedStoryId) ?? stories[0] ?? null;
+  const selectedStoryIndex = selectedStory
+    ? stories.findIndex((story) => story.id === selectedStory.id)
+    : -1;
+  const canFlipStories = stories.length > 1;
 
   useEffect(() => {
     if (!error || data) {
@@ -88,6 +107,36 @@ export function LatestSpaceNewsCard({
       window.clearTimeout(retryId);
     };
   }, [data, error, refresh]);
+
+  useEffect(() => {
+    const latestStories = data?.featuredStory
+      ? [data.featuredStory, ...data.articles]
+      : data?.articles ?? [];
+
+    if (latestStories.length === 0) {
+      if (selectedStoryId !== null) {
+        setSelectedStoryId(null);
+      }
+      return;
+    }
+
+    const hasSelectedStory = latestStories.some(
+      (story) => story.id === selectedStoryId,
+    );
+    if (!hasSelectedStory) {
+      setSelectedStoryId(latestStories[0].id);
+    }
+  }, [data, selectedStoryId]);
+
+  function selectStoryByOffset(offset: number) {
+    if (!selectedStory || stories.length === 0) {
+      return;
+    }
+
+    const nextIndex =
+      (selectedStoryIndex + offset + stories.length) % stories.length;
+    setSelectedStoryId(stories[nextIndex]?.id ?? selectedStory.id);
+  }
 
   return (
     <SectionCard
@@ -118,7 +167,7 @@ export function LatestSpaceNewsCard({
         <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-100">
           {error} OrbitNow will retry the intelligence feed automatically in about 2 minutes.
         </div>
-      ) : data && data.featuredStory ? (
+      ) : data && selectedStory ? (
         <div className="space-y-5">
           {preferences.newsTopics.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -131,29 +180,63 @@ export function LatestSpaceNewsCard({
           ) : null}
 
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1.16fr)_minmax(340px,0.84fr)]">
-            <a
-              className="group overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-              href={data.featuredStory.url}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <div className="relative">
-                <StoryImage
-                  className="h-[300px] w-full object-cover transition duration-300 group-hover:scale-[1.02] sm:h-[360px] xl:h-[400px]"
-                  imageUrl={data.featuredStory.imageUrl}
-                  title={data.featuredStory.title}
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent p-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="ui-chip ui-chip-live">Top story</span>
-                    <span className="ui-chip">{data.featuredStory.source}</span>
+            <div className="overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <a
+                className="group block"
+                href={selectedStory.url}
+                rel="noreferrer"
+              >
+                <div className="relative">
+                  <StoryImage
+                    className="h-[300px] w-full object-cover transition duration-300 group-hover:scale-[1.02] sm:h-[360px] xl:h-[400px]"
+                    imageUrl={selectedStory.imageUrl}
+                    title={selectedStory.title}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent p-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="ui-chip ui-chip-live">
+                        {selectedStory.id === data.featuredStory?.id
+                          ? "Top story"
+                          : `Story ${selectedStoryIndex + 1}`}
+                      </span>
+                      <span className="ui-chip">{selectedStory.source}</span>
+                      <span className="ui-chip">
+                        {selectedStoryIndex + 1} / {stories.length}
+                      </span>
+                    </div>
+                    <h3 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-white sm:text-[2rem]">
+                      {selectedStory.title}
+                    </h3>
                   </div>
-                  <h3 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-white sm:text-[2rem]">
-                    {data.featuredStory.title}
-                  </h3>
                 </div>
-              </div>
-            </a>
+              </a>
+
+              {canFlipStories ? (
+                <div className="flex items-center justify-between gap-3 border-t border-white/10 px-5 py-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                    Flip through the live story stack
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      aria-label="Show previous story"
+                      className="ui-btn-secondary"
+                      onClick={() => selectStoryByOffset(-1)}
+                      type="button"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      aria-label="Show next story"
+                      className="ui-btn-secondary"
+                      onClick={() => selectStoryByOffset(1)}
+                      type="button"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
 
             <div className="space-y-4">
               <div className="ui-panel ui-panel-feature p-5">
@@ -181,7 +264,7 @@ export function LatestSpaceNewsCard({
                     homeTimeZone,
                   )}{" "}
                   •{" "}
-                  {data.featuredStory.source}
+                  {data.featuredStory?.source ?? selectedStory.source}
                 </p>
               </div>
 
@@ -209,11 +292,11 @@ export function LatestSpaceNewsCard({
                 <div className="ui-panel">
                   <p className="ui-label">Story Timestamp</p>
                   <p className="mt-3 text-sm font-medium text-white">
-                    {formatRelativeTime(data.featuredStory.publishedAt)}
+                    {formatRelativeTime(selectedStory.publishedAt)}
                   </p>
                   <p className="mt-1 text-sm text-slate-300">
                     {formatDateTimeWithPreferences(
-                      data.featuredStory.publishedAt,
+                      selectedStory.publishedAt,
                       preferences.display,
                       homeTimeZone,
                     )}
@@ -235,15 +318,14 @@ export function LatestSpaceNewsCard({
               <div className="flex flex-wrap gap-3">
                 <a
                   className="ui-btn-primary"
-                  href={data.featuredStory.url}
+                  href={selectedStory.url}
                   rel="noreferrer"
-                  target="_blank"
                 >
-                  Open top story
+                  Open story
                 </a>
-                {data.featuredStory.authorNames.length > 0 ? (
+                {selectedStory.authorNames.length > 0 ? (
                   <div className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm text-slate-200">
-                    By {data.featuredStory.authorNames.join(", ")}
+                    By {selectedStory.authorNames.join(", ")}
                   </div>
                 ) : null}
               </div>
@@ -258,7 +340,6 @@ export function LatestSpaceNewsCard({
                   href={article.url}
                   key={article.id}
                   rel="noreferrer"
-                  target="_blank"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="ui-chip">{article.source}</span>

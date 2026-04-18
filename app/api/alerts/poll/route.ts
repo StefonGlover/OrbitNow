@@ -1,7 +1,7 @@
 import { buildAlertsForPreferences } from "@/lib/server/alerts";
 import { errorResponse, successResponse, unauthorized } from "@/lib/server/api";
 import { getSessionUserFromRequest } from "@/lib/server/auth";
-import { getUserAlertLedger, getUserPreferences, markDeliveredAlerts } from "@/lib/server/db";
+import { getUserAlertLedger, getUserPreferences } from "@/lib/server/db";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +25,6 @@ export async function GET() {
       preferences,
       deliveredByKey: ledger.deliveredByKey,
     });
-
-    await markDeliveredAlerts(
-      user.id,
-      payload.alerts.map((alert) => alert.key),
-    );
 
     return successResponse(payload);
   } catch (error) {

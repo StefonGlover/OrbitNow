@@ -13,7 +13,12 @@ import { formatDateTimeWithPreferences } from "@/lib/formatters";
 export function ProfileSettingsPanel() {
   const { lastSyncedAt, preferences, sessionUser, syncStatus } = useOrbitPreferences();
   const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
-  const enabledAlertCount = Object.values(preferences.alerts).filter(Boolean).length;
+  const enabledAlertCount = [
+    preferences.alerts.issOverheadSoon,
+    preferences.alerts.launchReminders,
+    preferences.alerts.majorNewsAlerts,
+    preferences.alerts.nightlyPlannerDigest,
+  ].filter(Boolean).length;
 
   return (
     <div className="space-y-7 lg:space-y-8">

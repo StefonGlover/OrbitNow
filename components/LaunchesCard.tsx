@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CardRefreshButton } from "@/components/CardRefreshButton";
 import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { SectionCard } from "@/components/SectionCard";
@@ -35,6 +36,14 @@ export function LaunchesCard({ initialData = null }: LaunchesCardProps) {
       description="Upcoming launch data proxied from Launch Library 2."
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {data ? (
+            <Link
+              className="ui-btn-secondary"
+              href={`/missions/${data.launch.id}`}
+            >
+              Mission details
+            </Link>
+          ) : null}
           {data ? (
             <button
               className="ui-btn-secondary"

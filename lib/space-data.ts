@@ -2,8 +2,10 @@ import {
   ApodApiResponse,
   IssApiResponse,
   LaunchesApiResponse,
+  LaunchSummary,
   LaunchLibraryUpcomingResponse,
   LatestSpaceNewsFeedResponse,
+  MissionDetailApiResponse,
   N2YoPositionsResponse,
   N2YoVisualPassesResponse,
   NasaApodResponse,
@@ -13,6 +15,7 @@ import {
   SatellitePositionApiResponse,
   SpaceflightNewsArticle,
   SpaceflightNewsArticlesResponse,
+  UpcomingLaunchesApiResponse,
   VisiblePassesApiResponse,
 } from "@/lib/types";
 import { withServerCache } from "@/lib/server/cache";
@@ -133,6 +136,110 @@ function normalizeRemoteAssetUrl(value: string | null) {
 function normalizeArticleSummary(value: string) {
   const cleaned = value.replace(/\s+/g, " ").trim();
   return cleaned || "No summary available for this article yet.";
+}
+
+function normalizeMissionText(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized || null;
+}
+
+function normalizeLaunchSummary(launch: LaunchLibraryUpcomingResponse["results"][number]): LaunchSummary {
+  return {
+    id: launch.id,
+    name: launch.name,
+    net: launch.net,
+    windowStart: launch.window_start,
+    status: launch.status.name,
+    provider: launch.launch_service_provider.name,
+    rocket: launch.rocket?.configuration?.full_name ?? null,
+    missionName: launch.mission?.name ?? null,
+    missionDescription: normalizeMissionText(launch.mission?.description),
+    missionType: launch.mission?.type ?? null,
+    orbit: launch.mission?.orbit?.name ?? null,
+    padName: launch.pad?.name ?? null,
+    locationName: launch.pad?.location?.name ?? null,
+    image: launch.image,
+  };
+}
+
+function buildMissionObjectives(launch: LaunchSummary) {
+  const description = normalizeMissionText(launch.missionDescription);
+
+  if (!description) {
+    return [
+      launch.orbit
+        ? `Track how the mission lines up with its planned ${launch.orbit} destination.`
+        : "Track the countdown milestones and watch for status changes.",
+      launch.provider
+        ? `Watch for updated notes from ${launch.provider} as launch approaches.`
+        : "Watch for provider updates as launch approaches.",
+    ];
+  }
+
+  return description
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function buildMissionTimeline(launch: LaunchSummary): MissionDetailApiResponse["timeline"] {
+  return [
+    {
+      label: "Window Opens",
+      time: launch.windowStart ?? launch.net,
+      description:
+        launch.windowStart && launch.windowStart !== launch.net
+          ? "Launch operations move into the published window."
+          : "The mission is currently targeting this NET time.",
+    },
+    {
+      label: "Launch Attempt",
+      time: launch.net,
+      description: `${launch.name} is currently scheduled to lift off at this target time.`,
+    },
+    {
+      label: "Target Orbit",
+      time: null,
+      description: launch.orbit
+        ? `Mission planning currently references ${launch.orbit}.`
+        : "Orbit details have not been published yet.",
+    },
+  ];
+}
+
+function buildMissionStatusSummary(launch: LaunchSummary) {
+  if (launch.status.toLowerCase().includes("go")) {
+    return `${launch.name} is currently in a go-style state with ${launch.provider} still targeting the published window.`;
+  }
+
+  if (launch.status.toLowerCase().includes("hold")) {
+    return `${launch.name} is in a hold state, so this mission is worth watching closely for timeline changes.`;
+  }
+
+  return `${launch.name} is presently marked "${launch.status}" by Launch Library 2.`;
+}
+
+function buildLaunchWindowLabel(launch: LaunchSummary) {
+  if (launch.windowStart && launch.windowStart !== launch.net) {
+    return `Window opens at ${launch.windowStart}. NET is ${launch.net}.`;
+  }
+
+  return `NET ${launch.net}.`;
+}
+
+function buildMissionRelatedTargets(launch: LaunchSummary) {
+  return [
+    launch.rocket ? `Rocket: ${launch.rocket}` : null,
+    launch.padName ? `Pad: ${launch.padName}` : null,
+    launch.locationName ? `Location: ${launch.locationName}` : null,
+    launch.orbit ? `Orbit: ${launch.orbit}` : null,
+    launch.missionType ? `Mission type: ${launch.missionType}` : null,
+  ].filter((item): item is string => Boolean(item));
 }
 
 function normalizeSpaceNewsArticle(article: SpaceflightNewsArticle) {
@@ -266,12 +373,26 @@ export async function fetchVisiblePasses(input: {
 }
 
 export async function fetchNextLaunch(): Promise<LaunchesApiResponse> {
-  return withServerCache("next-launch", {
+  const launches = await fetchUpcomingLaunches(10);
+  const [launch] = launches.launches;
+
+  if (!launch) {
+    throw new Error("No future launches were returned.");
+  }
+
+  return {
+    source: "Launch Library 2",
+    launch,
+  };
+}
+
+export async function fetchUpcomingLaunches(limit = 4): Promise<UpcomingLaunchesApiResponse> {
+  return withServerCache(`upcoming-launches:${Math.max(limit, 1)}`, {
     ttlMs: 300_000,
     staleWhileErrorMs: 3_600_000,
     loader: async () => {
       const params = new URLSearchParams({
-        limit: "1",
+        limit: Math.max(limit, 1).toString(),
         ordering: "net",
         mode: "detailed",
       });
@@ -284,29 +405,49 @@ export async function fetchNextLaunch(): Promise<LaunchesApiResponse> {
         },
       );
 
-      const nextLaunch = response.results[0];
+      const now = Date.now();
+      const launches = response.results
+        .filter((launch) => {
+          const launchTime = new Date(launch.net).getTime();
+          return Number.isFinite(launchTime) && launchTime > now;
+        })
+        .map(normalizeLaunchSummary)
+        .slice(0, limit);
 
-      if (!nextLaunch) {
-        throw new Error("No upcoming launches were returned.");
+      if (launches.length === 0) {
+        throw new Error("No future launches were returned.");
       }
 
       return {
         source: "Launch Library 2",
-        launch: {
-          id: nextLaunch.id,
-          name: nextLaunch.name,
-          net: nextLaunch.net,
-          windowStart: nextLaunch.window_start,
-          status: nextLaunch.status.name,
-          provider: nextLaunch.launch_service_provider.name,
-          rocket: nextLaunch.rocket?.configuration?.full_name ?? null,
-          missionName: nextLaunch.mission?.name ?? null,
-          missionDescription: nextLaunch.mission?.description ?? null,
-          orbit: nextLaunch.mission?.orbit?.name ?? null,
-          padName: nextLaunch.pad?.name ?? null,
-          locationName: nextLaunch.pad?.location?.name ?? null,
-          image: nextLaunch.image,
-        },
+        launches,
+      };
+    },
+  });
+}
+
+export async function fetchMissionDetail(
+  launchId: string,
+): Promise<MissionDetailApiResponse> {
+  return withServerCache(`mission-detail:${launchId}`, {
+    ttlMs: 300_000,
+    staleWhileErrorMs: 3_600_000,
+    loader: async () => {
+      const launches = await fetchUpcomingLaunches(12);
+      const mission = launches.launches.find((launch) => launch.id === launchId);
+
+      if (!mission) {
+        throw new Error("Mission detail is not currently available.");
+      }
+
+      return {
+        source: "Launch Library 2",
+        mission,
+        statusSummary: buildMissionStatusSummary(mission),
+        launchWindowLabel: buildLaunchWindowLabel(mission),
+        objectives: buildMissionObjectives(mission),
+        timeline: buildMissionTimeline(mission),
+        relatedTargets: buildMissionRelatedTargets(mission),
       };
     },
   });
@@ -326,6 +467,7 @@ export function createLaunchFallback(): LaunchesApiResponse {
       missionName: null,
       missionDescription:
         "The launch provider is taking longer than usual to respond. Try refreshing again shortly.",
+      missionType: null,
       orbit: null,
       padName: null,
       locationName: null,

@@ -67,7 +67,7 @@ export interface OrbitLocationLookupApiResponse {
 export interface OrbitNotificationAlert {
   id: string;
   key: string;
-  type: "iss-pass" | "launch" | "news";
+  type: "iss-pass" | "launch" | "news" | "planner";
   title: string;
   body: string;
   actionUrl: string | null;
@@ -77,6 +77,10 @@ export interface OrbitNotificationAlert {
 export interface OrbitAlertsPollApiResponse {
   alerts: OrbitNotificationAlert[];
   polledAt: string;
+}
+
+export interface OrbitAlertsAckApiResponse {
+  acknowledged: number;
 }
 
 export interface OpenNotifyIssResponse {
@@ -267,23 +271,47 @@ export interface LaunchLibraryUpcomingResponse {
   results: LaunchLibraryUpcomingItem[];
 }
 
+export interface LaunchSummary {
+  id: string;
+  name: string;
+  net: string;
+  windowStart: string | null;
+  status: string;
+  provider: string;
+  rocket: string | null;
+  missionName: string | null;
+  missionDescription: string | null;
+  missionType: string | null;
+  orbit: string | null;
+  padName: string | null;
+  locationName: string | null;
+  image: string | null;
+}
+
 export interface LaunchesApiResponse {
   source: "Launch Library 2";
-  launch: {
-    id: string;
-    name: string;
-    net: string;
-    windowStart: string | null;
-    status: string;
-    provider: string;
-    rocket: string | null;
-    missionName: string | null;
-    missionDescription: string | null;
-    orbit: string | null;
-    padName: string | null;
-    locationName: string | null;
-    image: string | null;
-  };
+  launch: LaunchSummary;
+}
+
+export interface UpcomingLaunchesApiResponse {
+  source: "Launch Library 2";
+  launches: LaunchSummary[];
+}
+
+export interface MissionDetailTimelineEntry {
+  label: string;
+  time: string | null;
+  description: string;
+}
+
+export interface MissionDetailApiResponse {
+  source: "Launch Library 2";
+  mission: LaunchSummary;
+  statusSummary: string;
+  launchWindowLabel: string;
+  objectives: string[];
+  timeline: MissionDetailTimelineEntry[];
+  relatedTargets: string[];
 }
 
 export interface NasaApodResponse {
@@ -432,4 +460,31 @@ export interface ViewingConditionsApiResponse {
   recommendedAction: string;
   confidenceNote: string;
   factors: ViewingConditionsFactor[];
+}
+
+export interface ObservingPlanHighlight {
+  label: string;
+  value: string;
+}
+
+export interface ObservingPlanWindow {
+  id: string;
+  type: "iss-pass" | "launch-window" | "moon-phase" | "tracking";
+  title: string;
+  startsAt: string | null;
+  summary: string;
+}
+
+export interface ObservingPlanApiResponse {
+  source: "OrbitNow Planner";
+  generatedAt: string;
+  locationName: string;
+  latitude: number;
+  longitude: number;
+  moonPhase: string;
+  moonIlluminationPercent: number;
+  plannerSummary: string;
+  recommendedFocus: string;
+  highlights: ObservingPlanHighlight[];
+  windows: ObservingPlanWindow[];
 }

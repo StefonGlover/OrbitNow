@@ -11,6 +11,7 @@ const labelClassName = "ui-label mb-2 block";
 
 export function LocationSettingsCard() {
   const { preferences, hydrated, setHomeLocation } = useOrbitPreferences();
+  const homeLocation = preferences.homeLocation;
   const [locationName, setLocationName] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -19,22 +20,28 @@ export function LocationSettingsCard() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
-  const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
-    if (!hydrated || seeded) {
+    if (!hydrated) {
       return;
     }
 
-    if (preferences.homeLocation) {
-      setLocationName(preferences.homeLocation.label);
-      setLatitude(preferences.homeLocation.latitude.toString());
-      setLongitude(preferences.homeLocation.longitude.toString());
-      setSelectedTimeZone(preferences.homeLocation.timeZone);
+    if (homeLocation) {
+      setLocationName(homeLocation.label);
+      setLatitude(homeLocation.latitude.toString());
+      setLongitude(homeLocation.longitude.toString());
+      setSelectedTimeZone(homeLocation.timeZone);
+      return;
     }
 
-    setSeeded(true);
-  }, [hydrated, preferences.homeLocation, seeded]);
+    setLocationName("");
+    setLatitude("");
+    setLongitude("");
+    setSelectedTimeZone(null);
+  }, [
+    homeLocation,
+    hydrated,
+  ]);
 
   function clearFeedback() {
     setStatusMessage(null);

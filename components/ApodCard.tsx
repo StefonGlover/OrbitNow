@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CardRefreshButton } from "@/components/CardRefreshButton";
 import { SectionCard } from "@/components/SectionCard";
 import { usePollingJson } from "@/hooks/usePollingJson";
@@ -22,6 +22,11 @@ export function ApodCard({ initialData = null }: ApodCardProps) {
     initialData,
   });
   const isBusy = isLoading || isRefreshing;
+  const [hasImageError, setHasImageError] = useState(false);
+  const fullResolutionUrl =
+    data?.item.hdImageUrl ?? data?.item.imageUrl ?? null;
+  const shouldShowNasaAssetLink =
+    Boolean(data?.item.imageUrl) && fullResolutionUrl !== data?.item.imageUrl;
 
   useEffect(() => {
     if (!error || data) {
@@ -36,6 +41,10 @@ export function ApodCard({ initialData = null }: ApodCardProps) {
       window.clearTimeout(retryId);
     };
   }, [data, error, refresh]);
+
+  useEffect(() => {
+    setHasImageError(false);
+  }, [data?.item.imageUrl]);
 
   return (
     <SectionCard
@@ -62,18 +71,21 @@ export function ApodCard({ initialData = null }: ApodCardProps) {
       ) : data ? (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] xl:grid-cols-[minmax(0,1.42fr)_minmax(360px,0.8fr)]">
           <div className="overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            {data.item.mediaType === "image" ? (
+            {data.item.mediaType === "image" && !hasImageError ? (
               // NASA APOD media can originate from different remote hosts, so this
               // stays as a standard image instead of a constrained Next image config.
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 alt={data.item.title}
                 className="h-full max-h-[560px] w-full object-cover xl:max-h-[620px]"
+                onError={() => setHasImageError(true)}
                 src={data.item.imageUrl}
               />
             ) : (
               <div className="flex h-full min-h-[320px] items-center justify-center bg-white/5 p-6 text-center text-sm text-slate-300">
-                This APOD entry is a {data.item.mediaType}. Open the NASA asset to view it.
+                {hasImageError
+                  ? "The APOD image could not be loaded from NASA right now. Open the NASA asset directly to view it."
+                  : `This APOD entry is a ${data.item.mediaType}. Open the NASA asset to view it.`}
               </div>
             )}
           </div>
@@ -101,22 +113,18 @@ export function ApodCard({ initialData = null }: ApodCardProps) {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <a
-                className="ui-btn-primary"
-                href={data.item.hdImageUrl ?? data.item.imageUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
+              <a className="ui-btn-primary" href={fullResolutionUrl ?? "#"} rel="noreferrer">
                 Open full resolution
               </a>
-              <a
-                className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"
-                href={data.item.imageUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Open NASA asset
-              </a>
+              {shouldShowNasaAssetLink ? (
+                <a
+                  className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"
+                  href={data.item.imageUrl}
+                  rel="noreferrer"
+                >
+                  Open NASA asset
+                </a>
+              ) : null}
             </div>
 
             {isRefreshing ? (

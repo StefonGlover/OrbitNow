@@ -10,6 +10,7 @@ const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 14;
 
 type SessionPayload = {
   userId: string;
+  version: number;
   exp: number;
 };
 
@@ -25,6 +26,10 @@ function getSessionSecret() {
   }
 
   throw serverConfigError("ORBITNOW_SESSION_SECRET is not configured on the server.");
+}
+
+export function assertSessionSecretConfigured() {
+  void getSessionSecret();
 }
 
 export function hashPassword(password: string, salt = randomBytes(16).toString("hex")) {
@@ -59,9 +64,13 @@ function signValue(value: string) {
   return createHmac("sha256", getSessionSecret()).update(value).digest("base64url");
 }
 
-export function createSessionToken(userId: string) {
+export function createSessionToken(input: {
+  userId: string;
+  version: number;
+}) {
   const payload: SessionPayload = {
-    userId,
+    userId: input.userId,
+    version: input.version,
     exp: Math.floor(Date.now() / 1000) + SESSION_DURATION_SECONDS,
   };
   const encodedPayload = encodeBase64Url(JSON.stringify(payload));
@@ -105,10 +114,16 @@ export function verifySessionToken(token: string): SessionPayload | null {
   }
 }
 
-export function applySessionCookie(response: NextResponse, userId: string) {
+export function applySessionCookie(
+  response: NextResponse,
+  input: {
+    userId: string;
+    version: number;
+  },
+) {
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
-    value: createSessionToken(userId),
+    value: createSessionToken(input),
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -148,6 +163,17 @@ export async function getSessionUserFromRequest(request?: NextRequest): Promise<
   }
 
   const user = await findUserById(payload.userId);
+
+  if (!user) {
+    return null;
+  }
+
+  const tokenVersion = typeof payload.version === "number" ? payload.version : 0;
+
+  if (tokenVersion !== user.sessionVersion) {
+    return null;
+  }
+
   return toClientSession(user);
 }
 

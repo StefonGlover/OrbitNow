@@ -15,7 +15,7 @@ const notificationRows = [
     key: "launchReminders",
     label: "Launch reminders",
     description:
-      "Watch the next launch window and surface a reminder as it moves inside the next 24 hours.",
+      "Watch the next launch window and surface a reminder when it moves inside your chosen lead time.",
   },
   {
     key: "majorNewsAlerts",
@@ -23,7 +23,22 @@ const notificationRows = [
     description:
       "Surface the highest-signal headline from the AI-guided space news desk.",
   },
+  {
+    key: "nightlyPlannerDigest",
+    label: "Nightly planner digest",
+    description:
+      "Send one early-evening observing planner summary for your saved home base when OrbitNow finds a useful night to watch.",
+  },
 ] as const;
+
+const leadHourOptions = [1, 3, 6, 12, 24, 48];
+
+function formatHourLabel(hour: number) {
+  const normalizedHour = ((hour % 24) + 24) % 24;
+  const period = normalizedHour >= 12 ? "PM" : "AM";
+  const baseHour = normalizedHour % 12 || 12;
+  return `${baseHour}:00 ${period}`;
+}
 
 export function NotificationPreferencesCard() {
   const {
@@ -105,6 +120,101 @@ export function NotificationPreferencesCard() {
             </div>
           );
         })}
+
+        <div className="ui-panel p-4">
+          <p className="text-sm font-semibold text-white">Launch lead time</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            Control how early OrbitNow should fire launch reminders before NET.
+          </p>
+          <div className="mt-4">
+            <select
+              className="ui-input"
+              onChange={(event) =>
+                updateAlerts({
+                  launchReminderLeadHours: Number(event.target.value),
+                })
+              }
+              value={preferences.alerts.launchReminderLeadHours}
+            >
+              {leadHourOptions.map((hours) => (
+                <option key={hours} value={hours}>
+                  {hours} hour{hours === 1 ? "" : "s"} before launch
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="ui-panel p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-white">Quiet hours</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Suppress in-app and browser alerts during your chosen local overnight
+                window.
+              </p>
+            </div>
+            <button
+              aria-pressed={preferences.alerts.quietHoursEnabled}
+              className={`ui-switch ${preferences.alerts.quietHoursEnabled ? "ui-switch-active" : ""}`}
+              onClick={() =>
+                updateAlerts({
+                  quietHoursEnabled: !preferences.alerts.quietHoursEnabled,
+                })
+              }
+              type="button"
+            >
+              <span
+                className={`ui-switch-thumb ${preferences.alerts.quietHoursEnabled ? "ui-switch-thumb-active" : ""}`}
+              />
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="ui-label mb-2 block" htmlFor="quietHoursStart">
+                Starts
+              </label>
+              <select
+                className="ui-input"
+                id="quietHoursStart"
+                onChange={(event) =>
+                  updateAlerts({
+                    quietHoursStartHour: Number(event.target.value),
+                  })
+                }
+                value={preferences.alerts.quietHoursStartHour}
+              >
+                {Array.from({ length: 24 }).map((_, hour) => (
+                  <option key={`start-${hour}`} value={hour}>
+                    {formatHourLabel(hour)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="ui-label mb-2 block" htmlFor="quietHoursEnd">
+                Ends
+              </label>
+              <select
+                className="ui-input"
+                id="quietHoursEnd"
+                onChange={(event) =>
+                  updateAlerts({
+                    quietHoursEndHour: Number(event.target.value),
+                  })
+                }
+                value={preferences.alerts.quietHoursEndHour}
+              >
+                {Array.from({ length: 24 }).map((_, hour) => (
+                  <option key={`end-${hour}`} value={hour}>
+                    {formatHourLabel(hour)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
 
         {sessionUser ? (
           recentAlerts.length > 0 ? (
