@@ -39,7 +39,7 @@ export function WeatherVisibilityCard({ enabled }: WeatherVisibilityCardProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!enabled) {
+    if (!enabled || isLoading) {
       return;
     }
 

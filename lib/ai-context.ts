@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   createApodFallback,
   createLaunchFallback,
@@ -30,7 +31,7 @@ export function createIssFallback(): IssApiResponse {
   };
 }
 
-export async function fetchAiDashboardContext(): Promise<AiDashboardContext> {
+export const fetchAiDashboardContext = cache(async (): Promise<AiDashboardContext> => {
   // All AI cards share the same dashboard snapshot so we only ever reason over
   // server-fetched data and never expose third-party secrets to the browser.
   const [iss, astronauts, launch, apod] = await Promise.all([
@@ -46,4 +47,4 @@ export async function fetchAiDashboardContext(): Promise<AiDashboardContext> {
     launch,
     apod,
   };
-}
+});

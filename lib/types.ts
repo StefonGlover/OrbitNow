@@ -45,6 +45,21 @@ export interface OrbitAuthResponse extends OrbitAuthSessionResponse {
   syncedAt: string | null;
 }
 
+export interface OrbitPasswordResetRequestResponse {
+  accepted: true;
+  resetToken?: string;
+  resetUrl?: string;
+  expiresAt?: string;
+}
+
+export interface OrbitPasswordResetConfirmResponse {
+  reset: true;
+}
+
+export interface OrbitAccountMutationResponse extends OrbitAuthSessionResponse {
+  message: string;
+}
+
 export interface OrbitPreferencesSyncResponse {
   preferences: OrbitPreferences;
   syncedAt: string;

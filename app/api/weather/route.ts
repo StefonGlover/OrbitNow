@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    enforceRateLimit(request, {
+    await enforceRateLimit(request, {
       scope: "ai-viewing-conditions",
       maxRequests: 20,
       windowMs: 1000 * 60 * 15,

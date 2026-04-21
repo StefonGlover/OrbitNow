@@ -34,6 +34,10 @@ export function TonightPlannerCard() {
   const hasAutoLoadedRef = useRef(false);
 
   async function fetchPlanner() {
+    if (isLoading) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 

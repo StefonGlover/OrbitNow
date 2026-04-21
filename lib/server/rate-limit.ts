@@ -1,18 +1,7 @@
 import { NextRequest } from "next/server";
+import { createHash } from "crypto";
 import { tooManyRequests } from "@/lib/server/api";
-
-type RateLimitBucket = {
-  count: number;
-  resetAt: number;
-};
-
-const globalRateLimitStore = globalThis as typeof globalThis & {
-  __orbitnowRateLimits?: Map<string, RateLimitBucket>;
-};
-
-const rateLimitStore =
-  globalRateLimitStore.__orbitnowRateLimits ?? new Map<string, RateLimitBucket>();
-globalRateLimitStore.__orbitnowRateLimits = rateLimitStore;
+import { consumeRateLimitBucket } from "@/lib/server/db";
 
 function getClientAddress(request: Request | NextRequest) {
   const forwardedFor = request.headers.get("x-forwarded-for");
@@ -24,15 +13,16 @@ function getClientAddress(request: Request | NextRequest) {
   return request.headers.get("x-real-ip")?.trim() || "anonymous";
 }
 
-function pruneExpiredBuckets(now: number) {
-  for (const [key, bucket] of Array.from(rateLimitStore.entries())) {
-    if (bucket.resetAt <= now) {
-      rateLimitStore.delete(key);
-    }
-  }
+function buildRateLimitIdentifier(request: Request | NextRequest) {
+  const address = getClientAddress(request);
+  const userAgent = request.headers.get("user-agent")?.trim() || "unknown-agent";
+
+  return createHash("sha256")
+    .update(`${address}|${userAgent}`)
+    .digest("hex");
 }
 
-export function enforceRateLimit(
+export async function enforceRateLimit(
   request: Request | NextRequest,
   input: {
     scope: string;
@@ -41,31 +31,16 @@ export function enforceRateLimit(
     message: string;
   },
 ) {
-  const now = Date.now();
-  pruneExpiredBuckets(now);
+  const result = await consumeRateLimitBucket({
+    scope: input.scope,
+    identifier: buildRateLimitIdentifier(request),
+    maxRequests: input.maxRequests,
+    windowMs: input.windowMs,
+  });
 
-  const bucketKey = `${input.scope}:${getClientAddress(request)}`;
-  const existingBucket = rateLimitStore.get(bucketKey);
-
-  if (!existingBucket || existingBucket.resetAt <= now) {
-    rateLimitStore.set(bucketKey, {
-      count: 1,
-      resetAt: now + input.windowMs,
-    });
-    return;
-  }
-
-  if (existingBucket.count >= input.maxRequests) {
-    const retryAfterSeconds = Math.max(
-      1,
-      Math.ceil((existingBucket.resetAt - now) / 1000),
-    );
-
+  if (!result.allowed) {
     throw tooManyRequests(input.message, {
-      retryAfterSeconds,
+      retryAfterSeconds: result.retryAfterSeconds ?? 1,
     });
   }
-
-  existingBucket.count += 1;
-  rateLimitStore.set(bucketKey, existingBucket);
 }

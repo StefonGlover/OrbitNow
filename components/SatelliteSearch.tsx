@@ -58,7 +58,7 @@ export function SatelliteSearch({
   );
 
   async function fetchSatellite(currentNoradId: string) {
-    if (!enabled) {
+    if (!enabled || isLoading) {
       return;
     }
 

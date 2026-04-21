@@ -24,6 +24,7 @@ import {
   ORBIT_PREFERENCES_STORAGE_KEY,
 } from "@/lib/orbit-preferences";
 import type {
+  OrbitAccountMutationResponse,
     ApiRouteResponse,
     OrbitAlertsAckApiResponse,
     OrbitAlertsPollApiResponse,
@@ -60,6 +61,11 @@ type OrbitPreferencesContextValue = {
   register: (input: { email: string; password: string }) => Promise<void>;
   login: (input: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
+  changePassword: (input: {
+    currentPassword: string;
+    nextPassword: string;
+  }) => Promise<string>;
+  deleteAccount: () => Promise<string>;
   syncNow: () => Promise<void>;
   requestNotificationPermission: () => Promise<OrbitNotificationPermission>;
   dismissAlert: (alertId: string) => void;
@@ -129,6 +135,10 @@ function addAlertsToCollection(
         new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
     )
     .slice(0, 8);
+}
+
+function isInternalOrbitUrl(value: string) {
+  return value.startsWith("/");
 }
 
 export function OrbitPreferencesProvider({
@@ -440,7 +450,11 @@ export function OrbitPreferencesProvider({
 
           notification.onclick = () => {
             if (alert.actionUrl) {
-              window.open(alert.actionUrl, "_blank", "noopener,noreferrer");
+              if (isInternalOrbitUrl(alert.actionUrl)) {
+                window.location.assign(alert.actionUrl);
+              } else {
+                window.open(alert.actionUrl, "_blank", "noopener,noreferrer");
+              }
             } else {
               window.focus();
             }
@@ -614,6 +628,58 @@ export function OrbitPreferencesProvider({
         setSyncStatus("local-only");
         setLastSyncedAt(null);
         latestServerPreferencesRef.current = null;
+      } finally {
+        setAuthPending(false);
+      }
+    },
+    changePassword: async ({ currentPassword, nextPassword }) => {
+      setAuthPending(true);
+
+      try {
+        const payload = await readApiData<OrbitAccountMutationResponse>(
+          "/api/auth/change-password",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              currentPassword,
+              nextPassword,
+            }),
+          },
+        );
+
+        setSessionUser(null);
+        setRecentAlerts([]);
+        setSyncError(null);
+        setSyncStatus("local-only");
+        setLastSyncedAt(null);
+        latestServerPreferencesRef.current = null;
+
+        return payload.message;
+      } finally {
+        setAuthPending(false);
+      }
+    },
+    deleteAccount: async () => {
+      setAuthPending(true);
+
+      try {
+        const payload = await readApiData<OrbitAccountMutationResponse>(
+          "/api/auth/delete-account",
+          {
+            method: "POST",
+          },
+        );
+
+        setSessionUser(null);
+        setRecentAlerts([]);
+        setSyncError(null);
+        setSyncStatus("local-only");
+        setLastSyncedAt(null);
+        latestServerPreferencesRef.current = null;
+        setPreferences(createDefaultOrbitPreferences());
+        window.localStorage.removeItem(ORBIT_PREFERENCES_STORAGE_KEY);
+
+        return payload.message;
       } finally {
         setAuthPending(false);
       }

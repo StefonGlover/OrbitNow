@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    enforceRateLimit(request, {
+    await enforceRateLimit(request, {
       scope: "ai-what-if",
       maxRequests: 12,
       windowMs: 1000 * 60 * 15,

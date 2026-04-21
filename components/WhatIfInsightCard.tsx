@@ -22,6 +22,10 @@ export function WhatIfInsightCard() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (isLoading) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 

@@ -129,9 +129,18 @@ export function errorResponse(error: unknown) {
     },
   };
 
+  const headers: Record<string, string> = createCacheHeaders(0);
+
+  if (
+    routeError.status === 429 &&
+    typeof routeError.details?.retryAfterSeconds === "number"
+  ) {
+    headers["Retry-After"] = String(routeError.details.retryAfterSeconds);
+  }
+
   return NextResponse.json(body, {
     status: routeError.status,
-    headers: createCacheHeaders(0),
+    headers,
   });
 }
 

@@ -81,7 +81,6 @@ export function LatestSpaceNewsCard({
     refresh,
   } = usePollingJson<LatestSpaceNewsApiResponse>(newsUrl, 600_000, {
     initialData,
-    revalidateOnMount: true,
   });
   const isBusy = isLoading || isRefreshing;
   const stories = data?.featuredStory

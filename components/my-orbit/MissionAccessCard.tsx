@@ -1,14 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { SectionCard } from "@/components/SectionCard";
 import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { formatDateTimeWithPreferences } from "@/lib/formatters";
+import type {
+  ApiRouteResponse,
+  OrbitPasswordResetRequestResponse,
+} from "@/lib/types";
 
 const inputClassName = "ui-input placeholder:text-slate-500";
 const labelClassName = "ui-label mb-2 block";
 
-type AuthMode = "register" | "login";
+type AuthMode = "register" | "login" | "forgot";
 
 function getSyncStateLabel(value: "local-only" | "syncing" | "synced" | "error") {
   switch (value) {
@@ -36,20 +41,58 @@ export function MissionAccessCard() {
     syncError,
     syncNow,
     syncStatus,
+    changePassword,
+    deleteAccount,
   } = useOrbitPreferences();
   const [mode, setMode] = useState<AuthMode>("register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resetUrl, setResetUrl] = useState<string | null>(null);
   const homeTimeZone = preferences.homeLocation?.timeZone ?? null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (authPending) {
+      return;
+    }
+
     setStatusMessage(null);
     setError(null);
+    setResetUrl(null);
 
     try {
+      if (mode === "forgot") {
+        const response = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        });
+        const json =
+          (await response.json()) as ApiRouteResponse<OrbitPasswordResetRequestResponse>;
+
+        if (!response.ok || !json.success) {
+          throw new Error(
+            json.success
+              ? "OrbitNow could not start password recovery."
+              : json.error.message,
+          );
+        }
+
+        setStatusMessage(
+          json.data.resetUrl
+            ? "A development reset link is ready below."
+            : "If that address exists, OrbitNow accepted the reset request.",
+        );
+        setResetUrl(json.data.resetUrl ?? null);
+        return;
+      }
+
       if (mode === "register") {
         await register({ email, password });
         setStatusMessage("Mission access enabled. Your My Orbit settings are now syncing.");
@@ -176,6 +219,102 @@ export function MissionAccessCard() {
                 Sign out
               </button>
             </div>
+
+            <form
+              className="ui-panel grid gap-4 p-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setStatusMessage(null);
+                setError(null);
+
+                void changePassword({
+                  currentPassword,
+                  nextPassword,
+                })
+                  .then((message) => {
+                    setCurrentPassword("");
+                    setNextPassword("");
+                    setStatusMessage(message);
+                  })
+                  .catch((changePasswordError) =>
+                    setError(
+                      changePasswordError instanceof Error
+                        ? changePasswordError.message
+                        : "OrbitNow could not update your password.",
+                    ),
+                  );
+              }}
+            >
+              <div>
+                <p className="ui-label">Password</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Rotate credentials from inside My Orbit. Changing your password signs
+                  out the current session so the new secret takes effect everywhere.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClassName} htmlFor="currentPassword">
+                    Current password
+                  </label>
+                  <input
+                    autoComplete="current-password"
+                    className={inputClassName}
+                    id="currentPassword"
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    type="password"
+                    value={currentPassword}
+                  />
+                </div>
+                <div>
+                  <label className={labelClassName} htmlFor="nextPassword">
+                    New password
+                  </label>
+                  <input
+                    autoComplete="new-password"
+                    className={inputClassName}
+                    id="nextPassword"
+                    onChange={(event) => setNextPassword(event.target.value)}
+                    type="password"
+                    value={nextPassword}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button className="ui-btn-primary" disabled={authPending} type="submit">
+                  Update password
+                </button>
+                <button
+                  className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm text-rose-100"
+                  disabled={authPending}
+                  onClick={() => {
+                    setStatusMessage(null);
+                    setError(null);
+
+                    if (
+                      !window.confirm(
+                        "Delete this OrbitNow account? Synced preferences and alerts will be removed.",
+                      )
+                    ) {
+                      return;
+                    }
+
+                    void deleteAccount()
+                      .then((message) => setStatusMessage(message))
+                      .catch((deleteError) =>
+                        setError(
+                          deleteError instanceof Error
+                            ? deleteError.message
+                            : "OrbitNow could not delete your account.",
+                        ),
+                      );
+                  }}
+                  type="button"
+                >
+                  Delete account
+                </button>
+              </div>
+            </form>
           </>
         ) : (
           <>
@@ -196,6 +335,7 @@ export function MissionAccessCard() {
                   setMode("register");
                   setStatusMessage(null);
                   setError(null);
+                  setResetUrl(null);
                 }}
                 type="button"
               >
@@ -207,10 +347,23 @@ export function MissionAccessCard() {
                   setMode("login");
                   setStatusMessage(null);
                   setError(null);
+                  setResetUrl(null);
                 }}
                 type="button"
               >
                 Sign in
+              </button>
+              <button
+                className={`ui-choice-pill ${mode === "forgot" ? "ui-choice-pill-active" : ""}`}
+                onClick={() => {
+                  setMode("forgot");
+                  setStatusMessage(null);
+                  setError(null);
+                  setResetUrl(null);
+                }}
+                type="button"
+              >
+                Reset password
               </button>
             </div>
 
@@ -229,7 +382,8 @@ export function MissionAccessCard() {
                   value={email}
                 />
               </div>
-              <div>
+              {mode !== "forgot" ? (
+                <div>
                 <label className={labelClassName} htmlFor="missionAccessPassword">
                   Password
                 </label>
@@ -242,20 +396,31 @@ export function MissionAccessCard() {
                   type="password"
                   value={password}
                 />
-              </div>
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-3">
                 <button className="ui-btn-primary" disabled={authPending} type="submit">
                   {authPending
                     ? mode === "register"
                       ? "Creating..."
-                      : "Signing in..."
+                      : mode === "login"
+                        ? "Signing in..."
+                        : "Preparing..."
                     : mode === "register"
                       ? "Create account"
-                      : "Sign in"}
+                      : mode === "login"
+                        ? "Sign in"
+                        : "Request reset"}
                 </button>
-                <div className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm text-slate-300">
-                  Existing local settings will be merged safely after sign-in
-                </div>
+                {mode !== "forgot" ? (
+                  <div className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm text-slate-300">
+                    Existing local settings will be merged safely after sign-in
+                  </div>
+                ) : (
+                  <div className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm text-slate-300">
+                    Development builds surface a reset link here until email delivery is wired in.
+                  </div>
+                )}
               </div>
             </form>
 
@@ -268,6 +433,19 @@ export function MissionAccessCard() {
             {statusMessage ? (
               <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
                 {statusMessage}
+              </div>
+            ) : null}
+
+            {resetUrl ? (
+              <div className="ui-panel p-4 text-sm text-slate-200">
+                <p className="ui-label">Reset link</p>
+                <p className="mt-3 leading-6">
+                  Open the recovery form at{" "}
+                  <Link className="text-cyan-200 underline underline-offset-4" href={resetUrl}>
+                    {resetUrl}
+                  </Link>
+                  .
+                </p>
               </div>
             ) : null}
           </>

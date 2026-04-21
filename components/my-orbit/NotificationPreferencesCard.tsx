@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { SectionCard } from "@/components/SectionCard";
 import { useOrbitPreferences } from "@/components/providers/OrbitPreferencesProvider";
 import { formatDateTimeWithPreferences } from "@/lib/formatters";
@@ -38,6 +39,10 @@ function formatHourLabel(hour: number) {
   const period = normalizedHour >= 12 ? "PM" : "AM";
   const baseHour = normalizedHour % 12 || 12;
   return `${baseHour}:00 ${period}`;
+}
+
+function isInternalOrbitUrl(value: string) {
+  return value.startsWith("/");
 }
 
 export function NotificationPreferencesCard() {
@@ -242,14 +247,23 @@ export function NotificationPreferencesCard() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {alert.actionUrl ? (
-                        <a
-                          className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"
-                          href={alert.actionUrl}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          Open
-                        </a>
+                        isInternalOrbitUrl(alert.actionUrl) ? (
+                          <Link
+                            className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"
+                            href={alert.actionUrl}
+                          >
+                            Open
+                          </Link>
+                        ) : (
+                          <a
+                            className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"
+                            href={alert.actionUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Open
+                          </a>
+                        )
                       ) : null}
                       <button
                         className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"

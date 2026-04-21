@@ -14,6 +14,8 @@ type SessionPayload = {
   exp: number;
 };
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function getSessionSecret() {
   const configuredSecret = process.env.ORBITNOW_SESSION_SECRET;
 
@@ -181,12 +183,8 @@ export function validateCredentialInput(input: {
   email?: string;
   password?: string;
 }) {
-  const email = input.email?.trim().toLowerCase() ?? "";
+  const email = validateEmailAddress(input.email);
   const password = input.password ?? "";
-
-  if (!email || !email.includes("@")) {
-    throw badRequest("Enter a valid email address.");
-  }
 
   if (password.length < 8) {
     throw badRequest("Password must be at least 8 characters long.");
@@ -194,6 +192,62 @@ export function validateCredentialInput(input: {
 
   return {
     email,
+    password,
+  };
+}
+
+export function validateEmailAddress(value: string | undefined) {
+  const email = value?.trim().toLowerCase() ?? "";
+
+  if (!email || !EMAIL_PATTERN.test(email)) {
+    throw badRequest("Enter a valid email address.");
+  }
+
+  return email;
+}
+
+export function validatePasswordChangeInput(input: {
+  currentPassword?: string;
+  nextPassword?: string;
+}) {
+  const currentPassword = input.currentPassword ?? "";
+  const nextPassword = input.nextPassword ?? "";
+
+  if (currentPassword.length < 8) {
+    throw badRequest("Current password is required.");
+  }
+
+  if (nextPassword.length < 8) {
+    throw badRequest("New password must be at least 8 characters long.");
+  }
+
+  if (currentPassword === nextPassword) {
+    throw badRequest("Choose a new password that is different from the current password.");
+  }
+
+  return {
+    currentPassword,
+    nextPassword,
+  };
+}
+
+export function validateResetPasswordInput(input: {
+  token?: string;
+  password?: string;
+}) {
+  const token = input.token?.trim() ?? "";
+  const password = input.password ?? "";
+
+  if (token.length < 24) {
+    throw badRequest("Reset token is invalid or missing.");
+  }
+
+  if (password.length < 8) {
+    throw badRequest("Password must be at least 8 characters long.");
+  }
+
+  return {
+    token,
     password,
   };
 }

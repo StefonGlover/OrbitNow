@@ -433,12 +433,14 @@ export async function fetchMissionDetail(
     ttlMs: 300_000,
     staleWhileErrorMs: 3_600_000,
     loader: async () => {
-      const launches = await fetchUpcomingLaunches(12);
-      const mission = launches.launches.find((launch) => launch.id === launchId);
-
-      if (!mission) {
-        throw new Error("Mission detail is not currently available.");
-      }
+      const response = await fetchJson<LaunchLibraryUpcomingResponse["results"][number]>(
+        `${LAUNCH_LIBRARY_BASE_URL}/launch/${launchId}/?mode=detailed`,
+        {
+          timeoutMs: 15_000,
+          retries: 1,
+        },
+      );
+      const mission = normalizeLaunchSummary(response);
 
       return {
         source: "Launch Library 2",

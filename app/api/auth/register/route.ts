@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     assertSessionSecretConfigured();
-    enforceRateLimit(request, {
+    await enforceRateLimit(request, {
       scope: "auth-register",
       maxRequests: 5,
       windowMs: 1000 * 60 * 15,

@@ -1,6 +1,6 @@
 # OrbitNow
 
-OrbitNow is a production-ready Next.js 14 + TypeScript dashboard for live orbital data. It uses the App Router, Tailwind CSS, Leaflet, and server-side proxy routes so third-party API keys stay on the server.
+OrbitNow is a hardened Next.js 14 + TypeScript dashboard for live orbital data. It uses the App Router, Tailwind CSS, Leaflet, a local SQLite-backed account store, and server-side proxy routes so third-party API keys stay on the server.
 
 ## Features
 
@@ -15,9 +15,12 @@ OrbitNow is a production-ready Next.js 14 + TypeScript dashboard for live orbita
 - Astronomy Picture of the Day via `/api/apod`
 - AI Mission Brief via `/api/mission-brief`
 - My Orbit personalization with account-backed sync and local-first fallback
+- Account recovery, password rotation, and account deletion flows
 - Home location lookup with server-side geocoding and timezone resolution
 - Account-aware alerts for ISS passes, launches, and major space news
+- Persistent rate limiting for auth, AI, and location-search routes
 - Typed API responses, loading states, and error states throughout
+- Vitest coverage for core auth and rate-limit flows
 
 ## Tech Stack
 
@@ -74,6 +77,7 @@ npm run dev
 ```bash
 npm run dev
 npm run lint
+npm run test
 npm run build
 npm run start
 ```
@@ -93,6 +97,10 @@ npm run start
 - `/api/auth/register`: Creates a lightweight OrbitNow account and starts a session
 - `/api/auth/login`: Signs in to a synced OrbitNow account
 - `/api/auth/logout`: Ends the current OrbitNow session
+- `/api/auth/forgot-password`: Starts password recovery and returns a reset link in development
+- `/api/auth/reset-password`: Resets a password with a valid recovery token
+- `/api/auth/change-password`: Rotates the current account password
+- `/api/auth/delete-account`: Deletes the signed-in OrbitNow account
 - `/api/preferences`: Reads and writes synced My Orbit preferences
 - `/api/location/search?q=...`: Looks up places and resolves timezones server-side
 - `/api/alerts/poll`: Polls account-aware alerts for browser delivery
@@ -104,5 +112,6 @@ npm run start
 - Open Notify uses plain HTTP, so those requests are intentionally made server-side only.
 - The `/api/weather` endpoint is now an AI-generated viewing brief, not a live meteorological feed, so it should be presented as guidance rather than measured weather.
 - My Orbit remains local-first via `localStorage`, then upgrades into account-backed sync when the user signs in.
-- This first account-sync version stores data in `data/orbitnow-db.json`, which keeps the client model simple while leaving room for a future database-backed upgrade.
+- Synced account data, password reset tokens, and rate-limit buckets persist in `data/orbitnow.sqlite`. The app automatically migrates legacy JSON user data from `data/orbitnow-db.json` on first boot.
 - Browser notifications work while OrbitNow is open and the user is signed in; the alert preferences are ready to evolve into push notifications later.
+- Password reset email delivery is not wired yet; development builds surface a direct reset link in My Orbit so the recovery flow is still testable end-to-end.
