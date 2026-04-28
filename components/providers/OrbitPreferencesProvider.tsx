@@ -83,6 +83,10 @@ function stampPreferences(
   });
 }
 
+function getFavoriteCanonicalId(favorite: Pick<OrbitFavoriteObjectInput, "id">) {
+  return favorite.id.replace(/^mission-/, "launch-");
+}
+
 async function readApiData<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
     credentials: "same-origin",
@@ -514,15 +518,19 @@ export function OrbitPreferencesProvider({
         stampPreferences((current) => {
           const nextFavorite: OrbitFavoriteObject = {
             ...favorite,
+            id: getFavoriteCanonicalId(favorite),
+            type: favorite.id.startsWith("mission-") ? "launch" : favorite.type,
             savedAt: new Date().toISOString(),
           };
+          const nextCanonicalId = getFavoriteCanonicalId(nextFavorite);
 
           return {
             ...current,
             favoriteObjects: [
               nextFavorite,
               ...current.favoriteObjects.filter(
-                (existingFavorite) => existingFavorite.id !== favorite.id,
+                (existingFavorite) =>
+                  getFavoriteCanonicalId(existingFavorite) !== nextCanonicalId,
               ),
             ].slice(0, 10),
           };

@@ -5,7 +5,7 @@ import {
   authenticateUserRecord,
   validateCredentialInput,
 } from "@/lib/server/auth";
-import { rotateUserSessionVersion, toClientSession } from "@/lib/server/db";
+import { toClientSession } from "@/lib/server/db";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import type { OrbitAuthResponse } from "@/lib/types";
 
@@ -32,12 +32,7 @@ export async function POST(request: Request) {
     const { email, password } = validateCredentialInput(
       typeof body === "object" && body ? (body as Record<string, unknown>) : {},
     );
-    const user = await authenticateUserRecord(email, password);
-    const sessionUser = await rotateUserSessionVersion(user.id);
-
-    if (!sessionUser) {
-      throw new Error("The account could not start a new session.");
-    }
+    const sessionUser = await authenticateUserRecord(email, password);
 
     const payload: OrbitAuthResponse = {
       authenticated: true,

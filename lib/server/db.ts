@@ -1,11 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "fs/promises";
 import path from "path";
 import { createHash, randomUUID } from "crypto";
-import initSqlJs, {
-  type BindParams,
-  type Database,
-  type SqlJsStatic,
-} from "sql.js";
+import type { BindParams, Database, SqlJsStatic } from "sql.js";
 import {
   createDefaultOrbitPreferences,
   normalizeOrbitPreferences,
@@ -161,11 +157,20 @@ async function readLegacyDatabase() {
   }
 }
 
+async function loadSqlJsModule() {
+  // Next can incorrectly prefer sql.js' browser export while bundling route handlers.
+  // Import the Node-oriented dist entry directly so server routes never execute the browser build.
+  const sqlJsModule = await import("sql.js/dist/sql-wasm.js");
+  return sqlJsModule.default;
+}
+
 function createSqlJsPromise() {
   if (!globalDatabaseState.__orbitnowSqlJs) {
-    globalDatabaseState.__orbitnowSqlJs = initSqlJs({
-      locateFile: (file) => path.join(process.cwd(), "node_modules", "sql.js", "dist", file),
-    });
+    globalDatabaseState.__orbitnowSqlJs = loadSqlJsModule().then((initSqlJs) =>
+      initSqlJs({
+        locateFile: (file) => path.join(process.cwd(), "node_modules", "sql.js", "dist", file),
+      }),
+    );
   }
 
   return globalDatabaseState.__orbitnowSqlJs;

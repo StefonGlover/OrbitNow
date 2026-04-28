@@ -25,6 +25,10 @@ export function ApodCard({ initialData = null }: ApodCardProps) {
   const [hasImageError, setHasImageError] = useState(false);
   const fullResolutionUrl =
     data?.item.hdImageUrl ?? data?.item.imageUrl ?? null;
+  const primaryAssetLabel =
+    data?.item.mediaType === "image" && data.item.hdImageUrl
+      ? "Open full resolution"
+      : "Open NASA feature";
   const shouldShowNasaAssetLink =
     Boolean(data?.item.imageUrl) && fullResolutionUrl !== data?.item.imageUrl;
 
@@ -113,14 +117,20 @@ export function ApodCard({ initialData = null }: ApodCardProps) {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <a className="ui-btn-primary" href={fullResolutionUrl ?? "#"} rel="noreferrer">
-                Open full resolution
+              <a
+                className="ui-btn-primary"
+                href={fullResolutionUrl ?? "#"}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {primaryAssetLabel}
               </a>
               {shouldShowNasaAssetLink ? (
                 <a
                   className="ui-btn-secondary rounded-[20px] px-4 py-3 text-sm"
                   href={data.item.imageUrl}
                   rel="noreferrer"
+                  target="_blank"
                 >
                   Open NASA asset
                 </a>

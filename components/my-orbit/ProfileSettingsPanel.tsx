@@ -22,17 +22,22 @@ export function ProfileSettingsPanel() {
 
   return (
     <div className="space-y-7 lg:space-y-8">
-      <section className="ui-card ui-card-hero">
+      <section className="ui-card ui-card-constellation ui-card-hero">
         <div className="relative z-[1] flex flex-col gap-6 border-b border-white/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="ui-kicker">Preferences & Account</p>
-            <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
-              My Orbit
-            </h1>
-            <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg">
-              Manage the observing preferences, saved objects, alerts, display defaults,
-              and account controls that shape your OrbitNow console on every visit.
-            </p>
+          <div className="flex gap-4">
+            <div className="ui-orbit-mark ui-orbit-mark-lg mt-1">
+              <span className="ui-live-dot h-2.5 w-2.5" />
+            </div>
+            <div>
+              <p className="ui-kicker">Preferences & Account</p>
+              <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
+                My Orbit
+              </h1>
+              <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg">
+                Manage the observing preferences, saved objects, alerts, display defaults,
+                and account controls that shape your OrbitNow console on every visit.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3">

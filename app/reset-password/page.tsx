@@ -15,7 +15,7 @@ export default function ResetPasswordPage({
   return (
     <main className="min-h-screen">
       <div className="mx-auto max-w-[880px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <section className="ui-card ui-card-hero">
+        <section className="ui-card ui-card-constellation ui-card-hero">
           <div className="relative z-[1] space-y-6">
             <div>
               <p className="ui-kicker">Account Recovery</p>

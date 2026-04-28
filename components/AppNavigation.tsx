@@ -22,12 +22,11 @@ export function AppNavigation() {
           : "Local-first";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/72 backdrop-blur-2xl">
+    <header className="ui-nav-frame sticky top-0 z-40 border-b border-white/10 backdrop-blur-2xl">
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
           <Link className="flex items-center gap-3" href="/">
-            <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/15 bg-gradient-to-br from-cyan-400/14 via-sky-400/10 to-indigo-500/10">
-              <span className="absolute inset-[9px] rounded-[18px] border border-white/10" />
+            <div className="ui-orbit-mark">
               <span className="ui-live-dot h-2.5 w-2.5" />
             </div>
             <div>

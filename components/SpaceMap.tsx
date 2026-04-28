@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   Circle,
   CircleMarker,
@@ -58,6 +58,7 @@ export function SpaceMap({
   const haloRef = useRef<Circle | null>(null);
   const issTrailRef = useRef<Polyline | null>(null);
   const satelliteLayerRef = useRef<LayerGroup | null>(null);
+  const [followIss, setFollowIss] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +84,7 @@ export function SpaceMap({
       });
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
+      map.on("dragstart", () => setFollowIss(false));
 
       L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
         attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
@@ -163,11 +165,27 @@ export function SpaceMap({
     markerRef.current.setLatLng(nextLatLng);
     glowRef.current.setLatLng(nextLatLng);
     haloRef.current.setLatLng(nextLatLng);
-    mapRef.current.flyTo(nextLatLng, mapRef.current.getZoom(), {
+
+    if (followIss) {
+      mapRef.current.flyTo(nextLatLng, mapRef.current.getZoom(), {
+        animate: true,
+        duration: 1.4,
+      });
+    }
+  }, [followIss, iss]);
+
+  function followCurrentIssPosition() {
+    setFollowIss(true);
+
+    if (!iss || !mapRef.current) {
+      return;
+    }
+
+    mapRef.current.flyTo([iss.latitude, iss.longitude], mapRef.current.getZoom(), {
       animate: true,
-      duration: 1.4,
+      duration: 1,
     });
-  }, [iss]);
+  }
 
   useEffect(() => {
     if (!issTrailRef.current) {
@@ -238,7 +256,7 @@ export function SpaceMap({
       isLoading={isLoading}
       loadingLabel="Tracking"
     >
-      <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/70">
+      <div className="ui-map-frame relative overflow-hidden rounded-[24px] border border-white/10 bg-slate-950/70">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.14),_transparent_22%),linear-gradient(180deg,_rgba(255,255,255,0.02),_transparent_22%)]" />
         <div
           className="h-[430px] w-full bg-slate-950 sm:h-[520px] lg:h-[660px]"
@@ -272,6 +290,14 @@ export function SpaceMap({
             </div>
           ) : null}
         </div>
+        <button
+          aria-pressed={followIss}
+          className="ui-btn-secondary absolute right-4 top-4 rounded-[18px] px-4 py-2.5 text-xs"
+          onClick={followCurrentIssPosition}
+          type="button"
+        >
+          {followIss ? "Following ISS" : "Follow ISS"}
+        </button>
 
         <div className="pointer-events-none absolute bottom-4 left-4 right-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="rounded-[24px] border border-white/10 bg-slate-950/80 px-4 py-3 text-xs text-slate-200 backdrop-blur-xl">

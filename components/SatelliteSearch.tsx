@@ -108,6 +108,9 @@ export function SatelliteSearch({
   }, [requestedFavoriteTrack?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const latestPosition = result?.positions[0];
+  const isResultTracked = result
+    ? trackedSatelliteIds.has(result.info.satid)
+    : false;
 
   return (
     <SectionCard
@@ -188,13 +191,18 @@ export function SatelliteSearch({
               <button
                 className="ui-btn-secondary flex-1 rounded-[20px] py-3 text-sm"
                 onClick={() => {
-                  setResult(null);
-                  setError(null);
-                  onRemoveTrackedSatellite(result.info.satid);
+                  if (isResultTracked) {
+                    setResult(null);
+                    setError(null);
+                    onRemoveTrackedSatellite(result.info.satid);
+                    return;
+                  }
+
+                  onTrackedSatelliteChange(result);
                 }}
                 type="button"
               >
-                Stop tracking
+                {isResultTracked ? "Stop tracking" : "Track this again"}
               </button>
               <button
                 className="ui-btn-secondary flex-1 rounded-[20px] py-3 text-sm"

@@ -184,6 +184,7 @@ export function LatestSpaceNewsCard({
                 className="group block"
                 href={selectedStory.url}
                 rel="noreferrer"
+                target="_blank"
               >
                 <div className="relative">
                   <StoryImage
@@ -319,6 +320,7 @@ export function LatestSpaceNewsCard({
                   className="ui-btn-primary"
                   href={selectedStory.url}
                   rel="noreferrer"
+                  target="_blank"
                 >
                   Open story
                 </a>
@@ -339,6 +341,7 @@ export function LatestSpaceNewsCard({
                   href={article.url}
                   key={article.id}
                   rel="noreferrer"
+                  target="_blank"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="ui-chip">{article.source}</span>

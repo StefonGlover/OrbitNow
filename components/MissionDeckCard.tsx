@@ -75,8 +75,8 @@ export function MissionDeckCard() {
                     className="ui-btn-secondary rounded-[18px] px-4 py-2.5 text-sm"
                     onClick={() =>
                       saveFavoriteObject({
-                        id: `mission-${mission.id}`,
-                        type: "mission",
+                        id: `launch-${mission.id}`,
+                        type: "launch",
                         label: mission.name,
                         subtitle: mission.provider,
                       })

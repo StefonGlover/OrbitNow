@@ -106,6 +106,18 @@ function normalizeFavoriteType(value: unknown): OrbitFavoriteObjectType {
   return "satellite";
 }
 
+function normalizeFavoriteIdentity(favorite: OrbitFavoriteObject): OrbitFavoriteObject {
+  if (!favorite.id.startsWith("mission-")) {
+    return favorite;
+  }
+
+  return {
+    ...favorite,
+    id: favorite.id.replace(/^mission-/, "launch-"),
+    type: "launch",
+  };
+}
+
 function normalizeHourValue(value: unknown, fallback: number) {
   return typeof value === "number" &&
     Number.isInteger(value) &&
@@ -291,6 +303,11 @@ export function normalizeOrbitPreferences(value: unknown): OrbitPreferences {
               ? favorite.noradId
               : null,
         }))
+        .map(normalizeFavoriteIdentity)
+        .filter(
+          (favorite, index, favorites) =>
+            favorites.findIndex((candidate) => candidate.id === favorite.id) === index,
+        )
     : defaults.favoriteObjects;
 
   return {
